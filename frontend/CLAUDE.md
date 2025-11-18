@@ -1,0 +1,1 @@
+This is a simple Vite application that is going to be deployed to AWS Amplify. It connects to a separate backend API running on AWS, and the API endpoint needs to be configurable at build time.
