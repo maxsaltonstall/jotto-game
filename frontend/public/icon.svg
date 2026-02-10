@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#667eea" rx="64"/>
+
+  <!-- Letter J -->
+  <path d="M 280 140 L 280 340 Q 280 400, 220 400 Q 160 400, 160 340 L 160 300 L 220 300 L 220 340 Q 220 360, 240 360 Q 260 360, 260 340 L 260 140 Z"
+        fill="white"
+        stroke="white"
+        stroke-width="8"/>
+
+  <!-- Dots representing word game -->
+  <circle cx="340" cy="180" r="12" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="380" cy="180" r="12" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="420" cy="180" r="12" fill="rgba(255,255,255,0.6)"/>
+</svg>

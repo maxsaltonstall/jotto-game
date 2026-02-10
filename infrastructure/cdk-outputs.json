@@ -1,0 +1,12 @@
+{
+  "JottoGameStack": {
+    "TableName": "JottoGameTable",
+    "CustomDomainUrl": "https://jotto.maxsaltonstall.com",
+    "ApiUrl": "https://cxa2b8e6b2.execute-api.us-east-1.amazonaws.com/prod/",
+    "CloudFrontUrl": "https://d9lngvs0yrake.cloudfront.net",
+    "WebsiteBucketName": "jotto-game-148203325623-us-east-1",
+    "WebsiteUrl": "http://jotto-game-148203325623-us-east-1.s3-website-us-east-1.amazonaws.com",
+    "JottoApiEndpoint5543E988": "https://cxa2b8e6b2.execute-api.us-east-1.amazonaws.com/prod/",
+    "NameServers": "ns-1605.awsdns-08.co.uk, ns-964.awsdns-56.net, ns-291.awsdns-36.com, ns-1413.awsdns-48.org"
+  }
+}

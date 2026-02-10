@@ -1,0 +1,20 @@
+{
+  "name": "jottogame-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jotto word guessing game with AWS serverless architecture",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "infrastructure"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:infra": "npm run build -w infrastructure",
+    "test:backend": "npm run test -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "deploy:infra": "npm run deploy -w infrastructure"
+  }
+}

@@ -1,0 +1,64 @@
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #dc3545;
+  color: white;
+  padding: 0.75rem 1rem;
+  z-index: 9999;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.offline-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.offline-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.offline-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Adjust app content when offline banner is showing */
+body:has(.offline-indicator) {
+  padding-top: 3rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .offline-indicator {
+    padding: 0.5rem;
+  }
+
+  .offline-text {
+    font-size: 0.85rem;
+  }
+
+  .offline-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+}

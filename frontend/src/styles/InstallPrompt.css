@@ -1,0 +1,147 @@
+.install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.install-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.install-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.install-text {
+  flex: 1;
+}
+
+.install-text h3 {
+  margin: 0 0 0.25rem 0;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.install-text p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.install-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.install-button {
+  padding: 0.5rem 1.25rem;
+  min-height: 44px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.install-button:hover {
+  background: #5568d3;
+}
+
+.dismiss-button {
+  padding: 0.5rem 1.25rem;
+  min-height: 44px;
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dismiss-button:hover {
+  background: #f8f9fa;
+  border-color: #999;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .install-prompt {
+    bottom: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    border-radius: 8px;
+  }
+
+  .install-content {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .install-icon {
+    font-size: 2rem;
+  }
+
+  .install-text h3 {
+    font-size: 1rem;
+  }
+
+  .install-text p {
+    font-size: 0.85rem;
+  }
+
+  .install-button,
+  .dismiss-button {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Very small screens - stack buttons */
+@media (max-width: 480px) {
+  .install-content {
+    flex-wrap: wrap;
+  }
+
+  .install-actions {
+    flex-direction: row;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .install-button,
+  .dismiss-button {
+    flex: 1;
+  }
+}
