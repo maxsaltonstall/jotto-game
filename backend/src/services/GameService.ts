@@ -4,6 +4,7 @@
 
 import { GameRepository } from '../repositories/GameRepository.js';
 import { StatsService } from './StatsService.js';
+import { WebSocketService } from './WebSocketService.js';
 import type { Game, GameWithSecrets, Guess, GameStateResponse } from '../models/types.js';
 import {
   ValidationError,
@@ -24,10 +25,12 @@ export class GameService {
   private repository: GameRepository;
   private statsService: StatsService;
   private aiService: any; // Lazy-loaded to avoid circular dependency
+  private webSocketService?: WebSocketService;
 
-  constructor(repository?: GameRepository, statsService?: StatsService) {
+  constructor(repository?: GameRepository, statsService?: StatsService, webSocketService?: WebSocketService) {
     this.repository = repository || new GameRepository();
     this.statsService = statsService || new StatsService();
+    this.webSocketService = webSocketService;
   }
 
   /**
@@ -120,7 +123,20 @@ export class GameService {
 
     // Return updated game state
     const updatedGame = await this.repository.getGame(gameId);
-    return this.sanitizeGame(updatedGame);
+    const sanitizedGame = this.sanitizeGame(updatedGame);
+
+    // Broadcast player joined event via WebSocket
+    if (this.webSocketService) {
+      // Fire and forget - don't wait for WebSocket broadcast
+      this.webSocketService.broadcastPlayerJoined(gameId, sanitizedGame, playerName).catch((err) => {
+        logger.error('Failed to broadcast player joined', {
+          gameId,
+          error: err.message
+        });
+      });
+    }
+
+    return sanitizedGame;
   }
 
   /**
@@ -205,6 +221,22 @@ export class GameService {
       if (winnerUserId) {
         await this.statsService.updateGameStats(gameId, playerId, winnerUserId, guessCount);
       }
+
+      // Broadcast game update via WebSocket
+      if (this.webSocketService) {
+        const updatedGame = await this.repository.getGame(gameId);
+        const allGuesses = await this.repository.getGuesses(gameId);
+        this.webSocketService.broadcastGameUpdate(
+          gameId,
+          this.sanitizeGame(updatedGame),
+          allGuesses
+        ).catch((err) => {
+          logger.error('Failed to broadcast game update', {
+            gameId,
+            error: err.message
+          });
+        });
+      }
     } else {
       // Switch turns
       await this.repository.updateGameState(gameId, {
@@ -225,6 +257,22 @@ export class GameService {
             error: err.message
           });
           // Silently fail - human can continue playing
+        });
+      }
+
+      // Broadcast game update via WebSocket (turn switched)
+      if (this.webSocketService) {
+        const updatedGame = await this.repository.getGame(gameId);
+        const allGuesses = await this.repository.getGuesses(gameId);
+        this.webSocketService.broadcastGameUpdate(
+          gameId,
+          this.sanitizeGame(updatedGame),
+          allGuesses
+        ).catch((err) => {
+          logger.error('Failed to broadcast game update', {
+            gameId,
+            error: err.message
+          });
         });
       }
     }

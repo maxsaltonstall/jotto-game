@@ -2,16 +2,17 @@
  * Lambda handler: Get game state
  */
 
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { sendDistributionMetric } from 'datadog-lambda-js';
 import { GameService } from '../services/GameService.js';
 import { success, error } from '../utils/response.js';
 import { generateETag, parseIfNoneMatch, etagsMatch } from '../utils/etag.js';
 import { createLogger } from '../utils/logger.js';
+import { wrapHandler } from '../utils/datadogWrapper.js';
 
 const gameService = new GameService();
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const startTime = Date.now();
   const gameId = event.pathParameters?.gameId;
   const logger = createLogger({ operation: 'getGameState', gameId });
@@ -75,3 +76,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return error(err as Error);
   }
 }
+
+// Export wrapped handler for Datadog instrumentation
+export const handler = wrapHandler(handlerImpl);

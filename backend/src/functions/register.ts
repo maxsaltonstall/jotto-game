@@ -2,15 +2,16 @@
  * Lambda handler: Register a new user
  */
 
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { sendDistributionMetric } from 'datadog-lambda-js';
 import { AuthService } from '../services/AuthService.js';
 import { success, error, parseBody } from '../utils/response.js';
 import type { CreateUserRequest } from '../models/user-types.js';
+import { wrapHandler } from '../utils/datadogWrapper.js';
 
 const authService = new AuthService();
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   try {
     const request = parseBody<CreateUserRequest>(event.body);
 
@@ -31,3 +32,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return error(err as Error);
   }
 }
+
+// Export wrapped handler for Datadog instrumentation
+export const handler = wrapHandler(handlerImpl);

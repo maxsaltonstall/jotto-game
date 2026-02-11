@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CreateGame } from './components/CreateGame';
@@ -17,9 +18,22 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { InstallPrompt } from './components/InstallPrompt';
 import './App.css';
 
+// Create a QueryClient instance with optimized defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000,          // Consider data fresh for 30 seconds
+      gcTime: 5 * 60 * 1000,     // Keep unused data in cache for 5 minutes (renamed from cacheTime)
+      refetchOnWindowFocus: false, // Don't refetch on tab focus (WebSocket handles this)
+      refetchOnReconnect: false,   // Don't refetch on reconnect (WebSocket handles this)
+      retry: 1,                    // Only retry failed requests once
+    },
+  },
+});
+
 function App() {
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <OfflineIndicator />
       <InstallPrompt />
       <AuthProvider>
@@ -30,7 +44,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-    </>
+    </QueryClientProvider>
   );
 }
 

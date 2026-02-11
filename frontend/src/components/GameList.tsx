@@ -1,8 +1,9 @@
 /**
  * Component for listing available games
+ * Optimized with React Query caching to reduce Lambda invocations
  */
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api, Game } from '../api/client';
 
 interface GameListProps {
@@ -11,36 +12,25 @@ interface GameListProps {
 }
 
 export function GameList({ playerId, onJoinGame }: GameListProps) {
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        const availableGames = await api.listGames('WAITING');
-        // Filter out games created by this player
-        setGames(availableGames.filter((g) => g.player1Id !== playerId));
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load games');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGames();
-    const interval = setInterval(fetchGames, 5000);
-
-    return () => clearInterval(interval);
-  }, [playerId]);
+  // Use React Query for smart caching and reduced polling
+  const { data: games = [], isLoading: loading, error } = useQuery({
+    queryKey: ['games', 'WAITING', playerId],
+    queryFn: async () => {
+      const availableGames = await api.listGames('WAITING');
+      // Filter out games created by this player
+      return availableGames.filter((g: Game) => g.player1Id !== playerId);
+    },
+    staleTime: 10000,           // Consider data fresh for 10 seconds
+    refetchInterval: 30000,     // Refetch every 30 seconds (reduced from 5s)
+    refetchOnWindowFocus: false, // Don't refetch on tab focus
+  });
 
   if (loading) {
     return <div className="game-list">Loading available games...</div>;
   }
 
   if (error) {
-    return <div className="game-list error">Error: {error}</div>;
+    return <div className="game-list error">Error: {error instanceof Error ? error.message : 'Failed to load games'}</div>;
   }
 
   if (games.length === 0) {

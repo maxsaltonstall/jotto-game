@@ -2,16 +2,21 @@
  * Lambda handler: Make a guess
  */
 
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { sendDistributionMetric } from 'datadog-lambda-js';
 import { GameService } from '../services/GameService.js';
+import { WebSocketService } from '../services/WebSocketService.js';
 import { success, error, parseBody } from '../utils/response.js';
 import type { MakeGuessRequest } from '../models/types.js';
 import { createLogger } from '../utils/logger.js';
+import { wrapHandler } from '../utils/datadogWrapper.js';
 
-const gameService = new GameService();
+// Initialize services with WebSocket support
+const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT;
+const webSocketService = wsEndpoint ? new WebSocketService(wsEndpoint) : undefined;
+const gameService = new GameService(undefined, undefined, webSocketService);
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const startTime = Date.now();
   const gameId = event.pathParameters?.gameId;
   const logger = createLogger({ operation: 'makeGuess', gameId });
@@ -60,3 +65,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return error(err as Error);
   }
 }
+
+// Export wrapped handler for Datadog instrumentation
+export const handler = wrapHandler(handlerImpl);

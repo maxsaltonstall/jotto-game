@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { useGamePolling } from '../hooks/usePolling';
+import { useOptimizedGameState } from '../hooks/useOptimizedGameState';
 import { GuessInput } from './GuessInput';
 import { Alphabet } from './Alphabet';
 import { PostGameSummary } from './PostGameSummary';
@@ -20,7 +20,8 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }: GameBoardProps) {
-  const { gameState, loading, error, isOnline, refetch } = useGamePolling(gameId, playerId, 3000);
+  // Use optimized game state with React Query caching + WebSocket real-time updates
+  const { gameState, loading, error, isOnline, refetch } = useOptimizedGameState(gameId, playerId, playerName);
   const { refreshStats } = useAuth();
   const [joinSecretWord, setJoinSecretWord] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);

@@ -2,14 +2,15 @@
  * Lambda handler: List games
  */
 
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { sendDistributionMetric } from 'datadog-lambda-js';
 import { GameService } from '../services/GameService.js';
 import { success, error } from '../utils/response.js';
+import { wrapHandler } from '../utils/datadogWrapper.js';
 
 const gameService = new GameService();
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   try {
     const status = event.queryStringParameters?.status || 'WAITING';
 
@@ -33,3 +34,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return error(err as Error);
   }
 }
+
+// Export wrapped handler for Datadog instrumentation
+export const handler = wrapHandler(handlerImpl);

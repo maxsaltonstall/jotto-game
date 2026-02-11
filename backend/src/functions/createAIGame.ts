@@ -2,17 +2,21 @@
  * Lambda function to create a game against AI opponent
  */
 
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { GameService } from '../services/GameService.js';
+import { WebSocketService } from '../services/WebSocketService.js';
 import { AIService, AI_PLAYER_ID, AI_PLAYER_NAME } from '../services/AIService.js';
 import { ValidationError } from '../utils/errors.js';
+import { wrapHandler } from '../utils/datadogWrapper.js';
 
-// Create services
-const gameService = new GameService();
+// Initialize services with WebSocket support
+const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT;
+const webSocketService = wsEndpoint ? new WebSocketService(wsEndpoint) : undefined;
+const gameService = new GameService(undefined, undefined, webSocketService);
 const aiService = new AIService(gameService);
 gameService.setAIService(aiService);
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   try {
     const { playerId, playerName, secretWord, userId } = JSON.parse(event.body || '{}');
 
@@ -60,4 +64,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       body: JSON.stringify({ message: 'Internal server error' })
     };
   }
-};
+}
+
+// Export wrapped handler for Datadog instrumentation
+export const handler = wrapHandler(handlerImpl);
