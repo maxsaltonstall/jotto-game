@@ -1,0 +1,39 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git (it's in .gitignore)
+
+# Required: Get these from https://app.datadoghq.com/organization-settings/api-keys
+datadog_api_key = "your-datadog-api-key-here"
+datadog_app_key = "your-datadog-application-key-here"
+
+# Optional: Set to your Datadog site (default: US5)
+# US1: https://api.datadoghq.com/
+# US3: https://api.us3.datadoghq.com/
+# US5: https://api.us5.datadoghq.com/
+# EU1: https://api.datadoghq.eu/
+datadog_api_url = "https://api.us5.datadoghq.com/"
+
+# Optional: Slack/PagerDuty integration
+slack_channel     = "@slack-jotto-alerts"
+pagerduty_service = "@pagerduty-critical"
+
+# Optional: Enable/disable monitors and SLOs
+enable_monitors = true
+enable_slos     = true
+
+# Optional: Custom alert thresholds
+alert_thresholds = {
+  error_rate_critical    = 10
+  error_rate_warning     = 5
+  lambda_errors_critical = 5
+  lambda_errors_warning  = 2
+  ai_latency_critical    = 3000
+  ai_latency_warning     = 2000
+  daily_cost_critical    = 5.0
+  daily_cost_warning     = 3.0
+}
+
+# Optional: Additional tags
+tags = [
+  "project:jotto-game",
+  "owner:max"
+]

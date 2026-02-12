@@ -1,0 +1,791 @@
+{
+  "title": "Jotto Game - Performance & Cost Monitoring",
+  "description": "Comprehensive monitoring for Jotto game: user engagement, AI performance, Lambda costs, WebSocket real-time, and errors",
+  "widgets": [
+    {
+      "id": 0,
+      "definition": {
+        "type": "note",
+        "content": "## 🎮 Game Engagement & Activity\nTrack game creation, completion rates, and user engagement metrics",
+        "background_color": "blue",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 0, "width": 12, "height": 1 }
+    },
+    {
+      "id": 1,
+      "definition": {
+        "title": "Total Games Created",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.game.created{*}.as_count()"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 0, "y": 1, "width": 3, "height": 2 }
+    },
+    {
+      "id": 2,
+      "definition": {
+        "title": "Games Completed",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.game.completed{*}.as_count()"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 3, "y": 1, "width": 3, "height": 2 }
+    },
+    {
+      "id": 3,
+      "definition": {
+        "title": "Average Game Duration",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1 / 1000 / 60" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "avg:jotto.game.duration{*}",
+                "aggregator": "avg"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 1,
+        "custom_unit": "min"
+      },
+      "layout": { "x": 6, "y": 1, "width": 3, "height": 2 }
+    },
+    {
+      "id": 4,
+      "definition": {
+        "title": "Average Guesses per Game",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "avg:jotto.game.total_guesses{*}",
+                "aggregator": "avg"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 1
+      },
+      "layout": { "x": 9, "y": 1, "width": 3, "height": 2 }
+    },
+    {
+      "id": 5,
+      "definition": {
+        "type": "note",
+        "content": "## 🤖 AI Opponent Performance\nTrack LLM response times, token usage, and estimated costs",
+        "background_color": "purple",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 3, "width": 12, "height": 1 }
+    },
+    {
+      "id": 6,
+      "definition": {
+        "title": "AI Move Latency (p50, p95, p99)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [
+              { "formula": "query1", "alias": "p50" },
+              { "formula": "query2", "alias": "p95" },
+              { "formula": "query3", "alias": "p99" }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "p50:jotto.ai.move.duration{*}"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "p95:jotto.ai.move.duration{*}"
+              },
+              {
+                "name": "query3",
+                "data_source": "metrics",
+                "query": "p99:jotto.ai.move.duration{*}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "ms" }
+      },
+      "layout": { "x": 0, "y": 4, "width": 4, "height": 2 }
+    },
+    {
+      "id": 7,
+      "definition": {
+        "title": "LLM Token Usage (Input vs Output)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [
+              { "formula": "query1", "alias": "Input Tokens" },
+              { "formula": "query2", "alias": "Output Tokens" }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.input{*}.as_count()"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.output{*}.as_count()"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "cool",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "area"
+          }
+        ]
+      },
+      "layout": { "x": 4, "y": 4, "width": 4, "height": 2 }
+    },
+    {
+      "id": 8,
+      "definition": {
+        "title": "Estimated Hourly AI Cost",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "(query1 * 0.001 / 1000000) + (query2 * 0.005 / 1000000)",
+                "alias": "Cost per hour"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.input{*}.as_count().rollup(sum, 3600)",
+                "aggregator": "sum"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.output{*}.as_count().rollup(sum, 3600)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 4,
+        "custom_unit": "$"
+      },
+      "layout": { "x": 8, "y": 4, "width": 2, "height": 2 }
+    },
+    {
+      "id": 9,
+      "definition": {
+        "title": "Estimated Daily AI Cost",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "(query1 * 0.001 / 1000000) + (query2 * 0.005 / 1000000)",
+                "alias": "Cost per day"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.input{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.output{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 3,
+        "custom_unit": "$"
+      },
+      "layout": { "x": 10, "y": 4, "width": 2, "height": 2 }
+    },
+    {
+      "id": 10,
+      "definition": {
+        "type": "note",
+        "content": "## ⚡ Lambda Performance\nMonitor function duration, invocations, errors, and cold starts",
+        "background_color": "orange",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 6, "width": 12, "height": 1 }
+    },
+    {
+      "id": 11,
+      "definition": {
+        "title": "Lambda Duration by Function (p95)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "p95:aws.lambda.duration{service:jotto-game} by {functionname}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "ms" }
+      },
+      "layout": { "x": 0, "y": 7, "width": 4, "height": 2 }
+    },
+    {
+      "id": 12,
+      "definition": {
+        "title": "Lambda Invocations by Function",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:aws.lambda.invocations{service:jotto-game}.as_count() by {functionname}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 4, "y": 7, "width": 4, "height": 2 }
+    },
+    {
+      "id": 13,
+      "definition": {
+        "title": "Lambda Errors",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:aws.lambda.errors{service:jotto-game}.as_count() by {functionname}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "warm",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 8, "y": 7, "width": 4, "height": 2 }
+    },
+    {
+      "id": 14,
+      "definition": {
+        "type": "note",
+        "content": "## 🔌 WebSocket Real-Time Performance\nTrack active connections, message latency, and broadcast metrics",
+        "background_color": "green",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 9, "width": 12, "height": 1 }
+    },
+    {
+      "id": 15,
+      "definition": {
+        "title": "Active WebSocket Connections",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "avg:jotto.websocket.connections{*}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "line"
+          }
+        ]
+      },
+      "layout": { "x": 0, "y": 10, "width": 4, "height": 2 }
+    },
+    {
+      "id": 16,
+      "definition": {
+        "title": "WebSocket Message Latency",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [
+              { "formula": "query1", "alias": "p50" },
+              { "formula": "query2", "alias": "p95" }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "p50:jotto.websocket.message.latency{*}"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "p95:jotto.websocket.message.latency{*}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "cool",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "ms" }
+      },
+      "layout": { "x": 4, "y": 10, "width": 4, "height": 2 }
+    },
+    {
+      "id": 17,
+      "definition": {
+        "title": "WebSocket Handler Duration",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "avg:aws.lambda.duration{functionname:*websocket*} by {functionname}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "ms" }
+      },
+      "layout": { "x": 8, "y": 10, "width": 4, "height": 2 }
+    },
+    {
+      "id": 18,
+      "definition": {
+        "type": "note",
+        "content": "## 🚨 Error Tracking & Debugging\nMonitor error rates, failed operations, and top error messages",
+        "background_color": "red",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 12, "width": 12, "height": 1 }
+    },
+    {
+      "id": 19,
+      "definition": {
+        "title": "Error Rate by Type",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.error{*}.as_count() by {error_type}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "warm",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 0, "y": 13, "width": 4, "height": 2 }
+    },
+    {
+      "id": 20,
+      "definition": {
+        "title": "Failed Guesses",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "formulas": [{ "formula": "query1" }],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.guess.error{*}.as_count()"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "warm",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": { "x": 4, "y": 13, "width": 4, "height": 2 }
+    },
+    {
+      "id": 21,
+      "definition": {
+        "title": "Recent Errors (Logs)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "log_stream",
+        "requests": [
+          {
+            "query": {
+              "data_source": "logs_stream",
+              "query_string": "service:jotto-game status:error",
+              "indexes": []
+            },
+            "response_format": "event_list",
+            "columns": [
+              { "field": "status_line", "width": "auto" },
+              { "field": "timestamp", "width": "auto" },
+              { "field": "content", "width": "full" }
+            ]
+          }
+        ],
+        "show_date_column": true,
+        "show_message_column": true,
+        "message_display": "expanded-md"
+      },
+      "layout": { "x": 8, "y": 13, "width": 4, "height": 2 }
+    },
+    {
+      "id": 22,
+      "definition": {
+        "type": "note",
+        "content": "## 💰 Cost Summary\nEstimated AWS Lambda and Anthropic Claude API costs",
+        "background_color": "yellow",
+        "font_size": "16",
+        "text_align": "left",
+        "vertical_align": "top",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left",
+        "has_padding": true
+      },
+      "layout": { "x": 0, "y": 15, "width": 12, "height": 1 }
+    },
+    {
+      "id": 23,
+      "definition": {
+        "title": "Lambda Billed Duration (GB-seconds)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1 * 256 / 1024 / 1000",
+                "alias": "GB-seconds per day"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:aws.lambda.billed_duration{service:jotto-game}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 2
+      },
+      "layout": { "x": 0, "y": 16, "width": 3, "height": 2 }
+    },
+    {
+      "id": 24,
+      "definition": {
+        "title": "Estimated Lambda Cost/Day",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "(query1 * 256 / 1024 / 1000) * 0.0000166667",
+                "alias": "Cost"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:aws.lambda.billed_duration{service:jotto-game}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 4,
+        "custom_unit": "$"
+      },
+      "layout": { "x": 3, "y": 16, "width": 3, "height": 2 }
+    },
+    {
+      "id": 25,
+      "definition": {
+        "title": "Total AI API Cost/Day",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "(query1 * 0.001 / 1000000) + (query2 * 0.005 / 1000000)",
+                "alias": "AI Cost"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.input{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.output{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 4,
+        "custom_unit": "$"
+      },
+      "layout": { "x": 6, "y": 16, "width": 3, "height": 2 }
+    },
+    {
+      "id": 26,
+      "definition": {
+        "title": "Total Estimated Cost/Day",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "((query1 * 256 / 1024 / 1000) * 0.0000166667) + ((query2 * 0.001 / 1000000) + (query3 * 0.005 / 1000000))",
+                "alias": "Total"
+              }
+            ],
+            "queries": [
+              {
+                "name": "query1",
+                "data_source": "metrics",
+                "query": "sum:aws.lambda.billed_duration{service:jotto-game}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              },
+              {
+                "name": "query2",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.input{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              },
+              {
+                "name": "query3",
+                "data_source": "metrics",
+                "query": "sum:jotto.llm.tokens.output{*}.as_count().rollup(sum, 86400)",
+                "aggregator": "sum"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "autoscale": true,
+        "precision": 4,
+        "custom_unit": "$"
+      },
+      "layout": { "x": 9, "y": 16, "width": 3, "height": 2 }
+    }
+  ],
+  "template_variables": [],
+  "layout_type": "ordered",
+  "is_read_only": false,
+  "notify_list": [],
+  "reflow_type": "fixed"
+}
