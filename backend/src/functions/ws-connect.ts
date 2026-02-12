@@ -4,14 +4,15 @@
  */
 
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { sendDistributionMetric } from 'datadog-lambda-js';
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
 import { ConnectionRepository } from '../repositories/ConnectionRepository.js';
 import { createLogger } from '../utils/logger.js';
-import { wrapHandler } from '../utils/datadogWrapper.js';
 
 const connectionRepository = new ConnectionRepository();
+const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT || '';
+const apiGatewayClient = wsEndpoint ? new ApiGatewayManagementApiClient({ endpoint: wsEndpoint }) : null;
 
-async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const logger = createLogger({ operation: 'ws-connect' });
   const connectionId = event.requestContext.connectionId;
 
@@ -19,7 +20,7 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
     logger.error('No connectionId in request context');
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error' })
+      body: ''
     };
   }
 
@@ -39,7 +40,7 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
 
       return {
         statusCode: 403,
-        body: JSON.stringify({ message: 'Missing gameId or playerId' })
+        body: ''
       };
     }
 
@@ -53,12 +54,12 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
     // Save connection to database
     await connectionRepository.saveConnection(connectionId, gameId, playerId, playerName);
 
-    // Send metric to Datadog
-    sendDistributionMetric('jotto.websocket.connected', 1, `game_id:${gameId}`);
+    // Note: Cannot send messages from $connect handler - connection isn't fully established until handler returns
+    // The frontend's onopen event will fire when the connection is ready
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Connected' })
+      body: ''
     };
   } catch (err) {
     logger.error('Failed to handle WebSocket connect', {
@@ -66,14 +67,11 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
       error: (err as Error).message
     });
 
-    sendDistributionMetric('jotto.websocket.connect.error', 1);
-
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Failed to connect' })
+      body: ''
     };
   }
 }
 
-// Export wrapped handler for Datadog instrumentation
-export const handler = wrapHandler(handlerImpl);
+// Note: Datadog wrapper removed from WebSocket handlers - incompatible with API Gateway WebSocket

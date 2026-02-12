@@ -161,6 +161,18 @@ export class JottoGameStack extends cdk.Stack {
       description: 'Get user stats'
     });
 
+    const cleanupGamesFn = new lambda.Function(this, 'CleanupGamesFunction', {
+      ...lambdaProps,
+      code: lambdaCode,
+      handler: 'dist/functions/cleanupGames.handler',
+      description: 'Cleanup old/inactive games (admin only)',
+      timeout: cdk.Duration.minutes(5), // Longer timeout for cleanup
+      environment: {
+        ...lambdaProps.environment,
+        ADMIN_SECRET: process.env.ADMIN_SECRET || 'change-me-in-production'
+      }
+    });
+
     // Grant DynamoDB permissions
     table.grantReadWriteData(createGameFn);
     table.grantReadWriteData(joinGameFn);
@@ -171,6 +183,7 @@ export class JottoGameStack extends cdk.Stack {
     table.grantReadWriteData(registerFn);
     table.grantReadWriteData(loginFn);
     table.grantReadData(getStatsFn);
+    table.grantReadWriteData(cleanupGamesFn); // Full access for deletion
 
     // Grant Secrets Manager read permissions for Datadog API key
     datadogApiKeySecret.grantRead(createGameFn);
@@ -291,6 +304,7 @@ export class JottoGameStack extends cdk.Stack {
     const registerIntegration = new HttpLambdaIntegration('RegisterIntegration', registerFn);
     const loginIntegration = new HttpLambdaIntegration('LoginIntegration', loginFn);
     const getStatsIntegration = new HttpLambdaIntegration('GetStatsIntegration', getStatsFn);
+    const cleanupGamesIntegration = new HttpLambdaIntegration('CleanupGamesIntegration', cleanupGamesFn);
 
     // Add routes
     httpApi.addRoutes({
@@ -347,7 +361,13 @@ export class JottoGameStack extends cdk.Stack {
       integration: getStatsIntegration
     });
 
-    // WebSocket API
+    httpApi.addRoutes({
+      path: '/admin/cleanup-games',
+      methods: [HttpMethod.POST, HttpMethod.DELETE],
+      integration: cleanupGamesIntegration
+    });
+
+    // WebSocket API - RECREATED FRESH
     const webSocketApi = new WebSocketApi(this, 'WebSocketApi', {
       gameTable: table,
       lambdaCode: lambdaCode,

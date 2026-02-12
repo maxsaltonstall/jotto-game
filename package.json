@@ -16,5 +16,8 @@
     "test:backend": "npm run test -w backend",
     "dev:frontend": "npm run dev -w frontend",
     "deploy:infra": "npm run deploy -w infrastructure"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
   }
 }

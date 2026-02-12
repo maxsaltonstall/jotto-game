@@ -21,7 +21,6 @@ export function useWebSocket(
 
   const wsClientRef = useRef<WebSocketClient | null>(null);
   const failedConnectionAttemptsRef = useRef<number>(0);
-  const maxConnectionAttempts = 3;
 
   // Fetch game state via REST API (used for initial load and fallback)
   const fetchGameState = useCallback(async () => {
@@ -55,7 +54,14 @@ export function useWebSocket(
 
   // Handle incoming WebSocket messages
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
-    if (message.type === 'GAME_UPDATE') {
+    // Clear any transient errors when we successfully receive a message
+    setError(null);
+
+    if (message.type === 'CONNECTED') {
+      // Connection confirmed by server
+      console.log('WebSocket connection confirmed by server:', message);
+      setConnectionStatus('connected');
+    } else if (message.type === 'GAME_UPDATE') {
       const gameUpdate = message as GameUpdateMessage;
       const payload = gameUpdate.payload;
 
@@ -67,7 +73,6 @@ export function useWebSocket(
       };
 
       setGameState(stateWithMyTurn);
-      setError(null);
 
       // Cache the updated game state
       if (gameId) {
@@ -100,6 +105,8 @@ export function useWebSocket(
       console.log('WebSocket connected');
       setConnectionStatus('connected');
       failedConnectionAttemptsRef.current = 0;
+      // Fetch initial game state after WebSocket is connected
+      fetchGameState();
     });
 
     wsClient.on('disconnected', () => {
@@ -116,26 +123,19 @@ export function useWebSocket(
       console.error('WebSocket connection failed after max attempts');
       setConnectionStatus('failed');
       failedConnectionAttemptsRef.current++;
-
-      // If WebSocket fails, fallback to REST API
-      if (failedConnectionAttemptsRef.current >= maxConnectionAttempts) {
-        setError('WebSocket connection failed, using REST API');
-        fetchGameState();
-      }
+      setError('WebSocket connection failed');
     });
 
     wsClient.on('message', handleWebSocketMessage);
 
     wsClient.on('error', (data) => {
-      console.error('WebSocket error:', data);
-      setError('WebSocket error: ' + (data.error || 'Unknown error'));
+      // Only log transient errors, don't show them to user
+      // They'll be shown if connection actually fails (via 'failed' event)
+      console.warn('WebSocket transient error (ignoring):', data);
     });
 
     // Connect to WebSocket
     wsClient.connect(wsUrl, gameId, playerId, playerName);
-
-    // Initial REST API fetch while WebSocket connects
-    fetchGameState();
 
     // Cleanup on unmount
     return () => {
@@ -144,22 +144,7 @@ export function useWebSocket(
     };
   }, [gameId, playerId, playerName, fetchGameState, handleWebSocketMessage]);
 
-  // Handle page visibility changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && connectionStatus !== 'connected') {
-        // Page became visible - refetch only if WebSocket is NOT connected
-        // This avoids redundant polling when WebSocket is working
-        fetchGameState();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchGameState, connectionStatus]);
+  // Note: Removed visibility change REST fallback - WebSocket only
 
   return {
     gameState,

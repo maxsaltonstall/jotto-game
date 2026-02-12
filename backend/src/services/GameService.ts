@@ -165,6 +165,13 @@ export class GameService {
 
     // Determine which player is guessing and which secret to check
     const isPlayer1 = playerId === game.player1Id;
+
+    // Check if this player has already completed
+    const playerAlreadyCompleted = isPlayer1 ? game.player1Completed : game.player2Completed;
+    if (playerAlreadyCompleted) {
+      throw new GameStateError('You have already guessed the secret word');
+    }
+
     const opponentId = isPlayer1 ? game.player2Id : game.player1Id;
     const opponentSecret = isPlayer1 ? game.player2Secret : game.player1Secret;
 
@@ -191,18 +198,37 @@ export class GameService {
 
     // Update game state
     if (isWinningGuess) {
-      // Player wins
-      logger.info('Game won', {
+      // Player correctly guessed the secret word
+      logger.info('Player completed their guess', {
         gameId,
         playerId,
-        winnerId: playerId,
         matchCount
       });
 
+      // Determine which player completed and check if both are done
+      const player1Completed = isPlayer1 ? true : (game.player1Completed || false);
+      const player2Completed = isPlayer1 ? (game.player2Completed || false) : true;
+      const bothPlayersCompleted = player1Completed && player2Completed;
+
+      // Set winnerId to first player who completed (if not already set)
+      const winnerId = game.winnerId || playerId;
+      const newStatus = bothPlayersCompleted ? 'COMPLETED' : 'ACTIVE';
+
       await this.repository.updateGameState(gameId, {
-        winnerId: playerId,
-        status: 'COMPLETED',
-        currentTurn: undefined
+        winnerId,
+        player1Completed,
+        player2Completed,
+        status: newStatus,
+        currentTurn: bothPlayersCompleted ? undefined : game.currentTurn
+      });
+
+      logger.info('Game state updated', {
+        gameId,
+        winnerId,
+        player1Completed,
+        player2Completed,
+        status: newStatus,
+        bothPlayersCompleted
       });
 
       // Count winner's guesses (including this one)
@@ -210,16 +236,16 @@ export class GameService {
       const winnerGuesses = allGuesses.filter(g => g.playerId === playerId);
       const guessCount = winnerGuesses.length;
 
-      logger.info('Updating winner stats', {
+      logger.info('Updating player stats', {
         gameId,
         playerId,
         guessCount
       });
 
-      // Update stats if winner is authenticated
-      const winnerUserId = isPlayer1 ? game.player1UserId : game.player2UserId;
-      if (winnerUserId) {
-        await this.statsService.updateGameStats(gameId, playerId, winnerUserId, guessCount);
+      // Update stats if player is authenticated
+      const playerUserId = isPlayer1 ? game.player1UserId : game.player2UserId;
+      if (playerUserId) {
+        await this.statsService.updateGameStats(gameId, playerId, playerUserId, guessCount);
       }
 
       // Broadcast game update via WebSocket

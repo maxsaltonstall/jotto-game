@@ -12,6 +12,7 @@ export type ConnectionStatus =
   | 'failed';
 
 export type WebSocketMessageType =
+  | 'CONNECTED'
   | 'GAME_UPDATE'
   | 'PLAYER_JOINED'
   | 'GAME_COMPLETED'
@@ -22,6 +23,13 @@ export interface WebSocketMessage {
   type: WebSocketMessageType;
   payload: any;
   timestamp: string;
+}
+
+export interface ConnectedMessage extends WebSocketMessage {
+  type: 'CONNECTED';
+  connectionId: string;
+  gameId: string;
+  playerId: string;
 }
 
 export interface GameUpdateMessage extends WebSocketMessage {

@@ -4,14 +4,11 @@
  */
 
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { sendDistributionMetric } from 'datadog-lambda-js';
 import { ConnectionRepository } from '../repositories/ConnectionRepository.js';
 import { createLogger } from '../utils/logger.js';
-import { wrapHandler } from '../utils/datadogWrapper.js';
-
 const connectionRepository = new ConnectionRepository();
 
-async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const logger = createLogger({ operation: 'ws-disconnect' });
   const connectionId = event.requestContext.connectionId;
 
@@ -29,9 +26,6 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
     // Delete connection from database
     await connectionRepository.deleteConnection(connectionId);
 
-    // Send metric to Datadog
-    sendDistributionMetric('jotto.websocket.disconnected', 1);
-
     return {
       statusCode: 200,
       body: JSON.stringify({ message: 'Disconnected' })
@@ -42,8 +36,6 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
       error: (err as Error).message
     });
 
-    sendDistributionMetric('jotto.websocket.disconnect.error', 1);
-
     // Return 200 even on error - connection is already closed
     return {
       statusCode: 200,
@@ -52,5 +44,4 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
   }
 }
 
-// Export wrapped handler for Datadog instrumentation
-export const handler = wrapHandler(handlerImpl);
+// Note: Datadog wrapper removed from WebSocket handlers - incompatible with API Gateway WebSocket

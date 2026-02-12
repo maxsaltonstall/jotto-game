@@ -14,7 +14,9 @@ export interface Game {
   player2Name?: string;
   player2UserId?: string; // If authenticated
   currentTurn?: string; // playerId whose turn it is
-  winnerId?: string;
+  winnerId?: string; // First player to guess correctly
+  player1Completed?: boolean; // True if player1 guessed correctly
+  player2Completed?: boolean; // True if player2 guessed correctly
   isAiGame?: boolean; // True if Player 2 is AI
   createdAt: string;
   updatedAt: string;
@@ -82,7 +84,9 @@ export interface GameItem {
   player2UserId?: string;
   player2Secret?: string;
   currentTurn?: string;
-  winnerId?: string;
+  winnerId?: string;    // First player to guess correctly
+  player1Completed?: boolean; // True if player1 guessed correctly
+  player2Completed?: boolean; // True if player2 guessed correctly
   isAiGame?: boolean;   // True if Player 2 is AI
   createdAt: string;
   updatedAt: string;

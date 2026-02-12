@@ -146,7 +146,15 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
           <p>Status: {game.status}</p>
           {game.winnerId && (
             <p className="winner">
-              Winner: {game.winnerId === playerId ? 'You!' : opponentName || 'Opponent'}
+              {game.status === 'COMPLETED' ? (
+                <>Winner: {game.winnerId === playerId ? 'You!' : opponentName || 'Opponent'}</>
+              ) : (
+                game.winnerId === playerId ? (
+                  <>🎉 You finished first! Waiting for {opponentName || 'opponent'} to complete...</>
+                ) : (
+                  <>{opponentName || 'Opponent'} finished first! Keep guessing to complete the game.</>
+                )
+              )}
             </p>
           )}
         </div>
@@ -190,24 +198,34 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
           </div>
         </div>
 
-        {game.status === 'ACTIVE' && (
-          <div className="input-section">
-            <Alphabet guesses={myGuesses} currentGuess={currentGuess} />
-            {!isOnline && (
-              <p className="turn-indicator" style={{ color: '#dc3545' }}>
-                You are offline. Viewing cached game state.
-              </p>
-            )}
-            {myTurn ? (
-              <>
-                <p className="turn-indicator">{isOnline ? 'Your turn!' : 'Your turn (offline - reconnect to play)'}</p>
-                <GuessInput onSubmit={handleGuess} disabled={!isOnline} onGuessChange={setCurrentGuess} />
-              </>
-            ) : (
-              <p className="turn-indicator">Waiting for opponent...</p>
-            )}
-          </div>
-        )}
+        {game.status === 'ACTIVE' && (() => {
+          const iAmPlayer1 = game.player1Id === playerId;
+          const iCompleted = iAmPlayer1 ? game.player1Completed : game.player2Completed;
+          const opponentCompleted = iAmPlayer1 ? game.player2Completed : game.player1Completed;
+
+          return (
+            <div className="input-section">
+              <Alphabet guesses={myGuesses} currentGuess={currentGuess} />
+              {!isOnline && (
+                <p className="turn-indicator" style={{ color: '#dc3545' }}>
+                  You are offline. Viewing cached game state.
+                </p>
+              )}
+              {iCompleted ? (
+                <p className="turn-indicator" style={{ color: '#28a745' }}>
+                  ✅ You've completed your guesses! {opponentCompleted ? 'Both players finished!' : `Waiting for ${opponentName || 'opponent'} to finish...`}
+                </p>
+              ) : myTurn ? (
+                <>
+                  <p className="turn-indicator">{isOnline ? 'Your turn!' : 'Your turn (offline - reconnect to play)'}</p>
+                  <GuessInput onSubmit={handleGuess} disabled={!isOnline} onGuessChange={setCurrentGuess} />
+                </>
+              ) : (
+                <p className="turn-indicator">Waiting for opponent...</p>
+              )}
+            </div>
+          );
+        })()}
 
         {game.status === 'COMPLETED' && showSummary && (
           <PostGameSummary

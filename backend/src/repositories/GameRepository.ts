@@ -9,7 +9,8 @@ import {
   PutCommand,
   GetCommand,
   QueryCommand,
-  UpdateCommand
+  UpdateCommand,
+  DeleteCommand
 } from '@aws-sdk/lib-dynamodb';
 import type {
   GameItem,
@@ -152,7 +153,7 @@ export class GameRepository {
   }
 
   /**
-   * Update game state (turn, winner, status)
+   * Update game state (turn, winner, status, completion)
    */
   async updateGameState(
     gameId: string,
@@ -160,6 +161,8 @@ export class GameRepository {
       currentTurn?: string;
       winnerId?: string;
       status?: GameStatus;
+      player1Completed?: boolean;
+      player2Completed?: boolean;
     }
   ): Promise<void> {
     const updateExpressions: string[] = ['SET updatedAt = :updated'];
@@ -175,6 +178,16 @@ export class GameRepository {
     if (updates.winnerId !== undefined) {
       updateExpressions.push('winnerId = :winner');
       expressionAttributeValues[':winner'] = updates.winnerId;
+    }
+
+    if (updates.player1Completed !== undefined) {
+      updateExpressions.push('player1Completed = :p1comp');
+      expressionAttributeValues[':p1comp'] = updates.player1Completed;
+    }
+
+    if (updates.player2Completed !== undefined) {
+      updateExpressions.push('player2Completed = :p2comp');
+      expressionAttributeValues[':p2comp'] = updates.player2Completed;
     }
 
     if (updates.status !== undefined) {
@@ -295,5 +308,53 @@ export class GameRepository {
       const index = item as PlayerGameIndex;
       return index.gameId;
     });
+  }
+
+  /**
+   * Delete a game and all associated data (guesses, player indexes)
+   */
+  async deleteGame(gameId: string): Promise<void> {
+    // Get the game to find player IDs
+    const game = await this.getGame(gameId);
+
+    // Delete all guesses for this game
+    const guesses = await this.getGuesses(gameId);
+    for (const guess of guesses) {
+      await docClient.send(new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `GAME#${gameId}`,
+          SK: `GUESS#${guess.timestamp}#${guess.playerId}`
+        }
+      }));
+    }
+
+    // Delete player indexes
+    await docClient.send(new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `PLAYER#${game.player1Id}`,
+        SK: `GAME#${gameId}`
+      }
+    }));
+
+    if (game.player2Id) {
+      await docClient.send(new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `PLAYER#${game.player2Id}`,
+          SK: `GAME#${gameId}`
+        }
+      }));
+    }
+
+    // Delete the game metadata
+    await docClient.send(new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `GAME#${gameId}`,
+        SK: 'METADATA'
+      }
+    }));
   }
 }

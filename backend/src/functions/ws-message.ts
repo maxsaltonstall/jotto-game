@@ -8,14 +8,12 @@ import {
   ApiGatewayManagementApiClient,
   PostToConnectionCommand
 } from '@aws-sdk/client-apigatewaymanagementapi';
-import { sendDistributionMetric } from 'datadog-lambda-js';
 import { createLogger } from '../utils/logger.js';
-import { wrapHandler } from '../utils/datadogWrapper.js';
 
 const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT || '';
 const client = wsEndpoint ? new ApiGatewayManagementApiClient({ endpoint: wsEndpoint }) : null;
 
-async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const logger = createLogger({ operation: 'ws-message' });
   const connectionId = event.requestContext.connectionId;
 
@@ -51,7 +49,6 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
       await client.send(command);
 
       logger.debug('Sent PONG response', { connectionId });
-      sendDistributionMetric('jotto.websocket.ping', 1);
     }
 
     return {
@@ -64,8 +61,6 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
       error: (err as Error).message
     });
 
-    sendDistributionMetric('jotto.websocket.message.error', 1);
-
     return {
       statusCode: 500,
       body: JSON.stringify({ message: 'Failed to process message' })
@@ -73,5 +68,4 @@ async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promi
   }
 }
 
-// Export wrapped handler for Datadog instrumentation
-export const handler = wrapHandler(handlerImpl);
+// Note: Datadog wrapper removed from WebSocket handlers - incompatible with API Gateway WebSocket

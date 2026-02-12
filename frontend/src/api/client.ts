@@ -12,7 +12,9 @@ export interface Game {
   player2Id?: string;
   player2Name?: string;
   currentTurn?: string;
-  winnerId?: string;
+  winnerId?: string; // First player to guess correctly
+  player1Completed?: boolean; // True if player1 guessed correctly
+  player2Completed?: boolean; // True if player2 guessed correctly
   createdAt: string;
   updatedAt: string;
 }

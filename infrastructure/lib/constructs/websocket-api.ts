@@ -68,8 +68,12 @@ export class WebSocketApi extends Construct {
     });
 
     // Lambda Functions for WebSocket routes
+    // Note: No Datadog layers - WebSocket handlers use CloudWatch logging only
     const connectFn = new lambda.Function(this, 'ConnectFunction', {
-      ...props.lambdaProps,
+      runtime: props.lambdaProps.runtime,
+      timeout: props.lambdaProps.timeout,
+      memorySize: props.lambdaProps.memorySize,
+      layers: [], // No Datadog layers for WebSocket handlers
       code: props.lambdaCode,
       handler: 'dist/functions/ws-connect.handler',
       description: 'Handle WebSocket $connect route',
@@ -80,7 +84,10 @@ export class WebSocketApi extends Construct {
     });
 
     const disconnectFn = new lambda.Function(this, 'DisconnectFunction', {
-      ...props.lambdaProps,
+      runtime: props.lambdaProps.runtime,
+      timeout: props.lambdaProps.timeout,
+      memorySize: props.lambdaProps.memorySize,
+      layers: [], // No Datadog layers for WebSocket handlers
       code: props.lambdaCode,
       handler: 'dist/functions/ws-disconnect.handler',
       description: 'Handle WebSocket $disconnect route',
@@ -91,7 +98,10 @@ export class WebSocketApi extends Construct {
     });
 
     const messageFn = new lambda.Function(this, 'MessageFunction', {
-      ...props.lambdaProps,
+      runtime: props.lambdaProps.runtime,
+      timeout: props.lambdaProps.timeout,
+      memorySize: props.lambdaProps.memorySize,
+      layers: [], // No Datadog layers for WebSocket handlers
       code: props.lambdaCode,
       handler: 'dist/functions/ws-message.handler',
       description: 'Handle WebSocket $default route (messages)',
@@ -133,7 +143,8 @@ export class WebSocketApi extends Construct {
     const stage = new apigatewayv2.WebSocketStage(this, 'ProdStage', {
       webSocketApi: this.webSocketApi,
       stageName: 'prod',
-      autoDeploy: true
+      autoDeploy: true,
+      description: `WebSocket stage - deployed ${new Date().toISOString()}`
     });
 
     // Store WebSocket URL for frontend
@@ -167,8 +178,18 @@ export class WebSocketApi extends Construct {
     // This needs to be done after stage creation to get the callback URL
     const callbackUrl = `https://${this.webSocketApi.apiId}.execute-api.${cdk.Stack.of(this).region}.amazonaws.com/${stage.stageName}`;
 
-    // Update message function with the callback URL
+    // Update message and connect functions with the callback URL
     messageFn.addEnvironment('WEBSOCKET_API_ENDPOINT', callbackUrl);
+    connectFn.addEnvironment('WEBSOCKET_API_ENDPOINT', callbackUrl);
+
+    // Grant connect function permission to post to connections
+    connectFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['execute-api:ManageConnections'],
+      resources: [
+        `arn:aws:execute-api:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:${this.webSocketApi.apiId}/*`
+      ]
+    }));
 
     // Output WebSocket URL
     new cdk.CfnOutput(this, 'WebSocketUrl', {
