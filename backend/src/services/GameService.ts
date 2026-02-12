@@ -20,6 +20,7 @@ import {
 import { generateGameCode } from '../utils/gameCodeGenerator.js';
 import { AI_PLAYER_ID } from './AIService.js';
 import { logger } from '../utils/logger.js';
+import { MetricsService } from '../utils/metrics.js';
 
 export class GameService {
   private repository: GameRepository;
@@ -76,6 +77,9 @@ export class GameService {
 
     await this.repository.createGame(game);
 
+    // Track game creation metrics
+    MetricsService.trackGameCreated(gameId, isAiGame || false);
+
     return this.sanitizeGame(game);
   }
 
@@ -120,6 +124,9 @@ export class GameService {
       currentTurn: game.player1Id,
       status: 'ACTIVE'
     });
+
+    // Track game joined metrics
+    MetricsService.trackGameJoined(gameId);
 
     // Return updated game state
     const updatedGame = await this.repository.getGame(gameId);
@@ -196,6 +203,9 @@ export class GameService {
 
     await this.repository.saveGuess(guess);
 
+    // Track guess metrics
+    MetricsService.trackGuess(playerId, matchCount, isWinningGuess);
+
     // Update game state
     if (isWinningGuess) {
       // Player correctly guessed the secret word
@@ -235,6 +245,31 @@ export class GameService {
       const allGuesses = await this.repository.getGuesses(gameId);
       const winnerGuesses = allGuesses.filter(g => g.playerId === playerId);
       const guessCount = winnerGuesses.length;
+
+      // Track player completion
+      MetricsService.trackPlayerCompleted(playerId, guessCount, !game.winnerId);
+
+      // If both players completed, track game completion
+      if (bothPlayersCompleted) {
+        const gameDuration = new Date().getTime() - new Date(game.createdAt).getTime();
+        const totalGuesses = allGuesses.length;
+
+        MetricsService.trackGameCompleted(
+          gameId,
+          winnerId,
+          gameDuration,
+          totalGuesses,
+          game.isAiGame || false
+        );
+
+        logger.info('Game completed', {
+          gameId,
+          winnerId,
+          duration: gameDuration,
+          totalGuesses,
+          winnerGuesses: guessCount
+        });
+      }
 
       logger.info('Updating player stats', {
         gameId,
@@ -276,14 +311,16 @@ export class GameService {
           opponentId
         });
 
-        // Fire and forget - don't await to keep response fast
-        this.aiService.makeAIMove(gameId).catch((err: Error) => {
+        // Await AI move to ensure it completes before Lambda terminates
+        try {
+          await this.aiService.makeAIMove(gameId);
+        } catch (err) {
           logger.error('AI move failed', {
             gameId,
-            error: err.message
+            error: (err as Error).message
           });
-          // Silently fail - human can continue playing
-        });
+          // Continue - human can still play even if AI fails
+        }
       }
 
       // Broadcast game update via WebSocket (turn switched)

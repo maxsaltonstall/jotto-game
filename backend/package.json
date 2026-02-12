@@ -11,13 +11,14 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@aws-lambda-powertools/logger": "^2.0.0",
     "@aws-sdk/client-apigatewaymanagementapi": "^3.987.0",
     "@aws-sdk/client-dynamodb": "^3.470.0",
     "@aws-sdk/lib-dynamodb": "^3.470.0",
     "bcryptjs": "^2.4.3",
     "datadog-lambda-js": "^12.133.0",
-    "dd-trace": "^5.85.0",
+    "dd-trace": "^5.86.0",
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1"
   },

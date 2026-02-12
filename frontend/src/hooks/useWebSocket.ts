@@ -7,6 +7,7 @@ import { api, GameStateResponse } from '../api/client';
 import { WebSocketClient } from '../api/websocket';
 import type { WebSocketMessage, GameUpdateMessage, ConnectionStatus } from '../types/websocket';
 import { cacheGameState, getCachedGameState } from '../utils/offlineStorage';
+import { RUMTracking } from '../utils/datadog-rum';
 
 export function useWebSocket(
   gameId: string | null,
@@ -105,6 +106,8 @@ export function useWebSocket(
       console.log('WebSocket connected');
       setConnectionStatus('connected');
       failedConnectionAttemptsRef.current = 0;
+      // Track WebSocket connection in RUM
+      RUMTracking.trackWebSocketEvent('connected', { gameId });
       // Fetch initial game state after WebSocket is connected
       fetchGameState();
     });
@@ -112,6 +115,8 @@ export function useWebSocket(
     wsClient.on('disconnected', () => {
       console.log('WebSocket disconnected');
       setConnectionStatus('disconnected');
+      // Track WebSocket disconnection in RUM
+      RUMTracking.trackWebSocketEvent('disconnected', { gameId });
     });
 
     wsClient.on('reconnecting', () => {
@@ -124,6 +129,11 @@ export function useWebSocket(
       setConnectionStatus('failed');
       failedConnectionAttemptsRef.current++;
       setError('WebSocket connection failed');
+      // Track WebSocket failure in RUM
+      RUMTracking.trackWebSocketEvent('error', {
+        gameId,
+        reason: 'Connection failed after max attempts'
+      });
     });
 
     wsClient.on('message', handleWebSocketMessage);
@@ -132,6 +142,12 @@ export function useWebSocket(
       // Only log transient errors, don't show them to user
       // They'll be shown if connection actually fails (via 'failed' event)
       console.warn('WebSocket transient error (ignoring):', data);
+      // Track transient errors in RUM for debugging
+      RUMTracking.trackWebSocketEvent('error', {
+        gameId,
+        reason: 'Transient error',
+        data
+      });
     });
 
     // Connect to WebSocket
@@ -142,7 +158,7 @@ export function useWebSocket(
       wsClient.disconnect();
       wsClientRef.current = null;
     };
-  }, [gameId, playerId, playerName, fetchGameState, handleWebSocketMessage]);
+  }, [gameId, playerId, playerName]); // Removed fetchGameState and handleWebSocketMessage to prevent reconnection loop
 
   // Note: Removed visibility change REST fallback - WebSocket only
 

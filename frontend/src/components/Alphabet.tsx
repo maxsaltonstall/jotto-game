@@ -12,13 +12,20 @@ interface AlphabetProps {
 type LetterState = 'unused' | 'used' | 'excluded' | 'confirmed' | 'pending';
 
 export function Alphabet({ guesses, currentGuess = '' }: AlphabetProps) {
-  // Desktop: 2 rows
+  // Desktop: 2 rows (wide screens)
   const desktopRows = [
     'ABCDEFGHIJKLM'.split(''),
     'NOPQRSTUVWXYZ'.split('')
   ];
 
-  // Mobile: 6 rows of 4-5 letters each
+  // Tablet/Narrow: 3 rows (medium screens)
+  const mediumRows = [
+    'ABCDEFGHI'.split(''),
+    'JKLMNOPQR'.split(''),
+    'STUVWXYZ'.split('')
+  ];
+
+  // Mobile: 6 rows of 4-5 letters each (small screens)
   const mobileRows = [
     'ABCD'.split(''),
     'EFGH'.split(''),
@@ -93,7 +100,7 @@ export function Alphabet({ guesses, currentGuess = '' }: AlphabetProps) {
 
   return (
     <>
-      {/* Desktop layout - 2 rows */}
+      {/* Desktop layout - 2 rows (wide screens) */}
       <div className="alphabet alphabet-desktop">
         {desktopRows.map((row, i) => (
           <div key={`desktop-${i}`} className="alphabet-row">
@@ -102,7 +109,16 @@ export function Alphabet({ guesses, currentGuess = '' }: AlphabetProps) {
         ))}
       </div>
 
-      {/* Mobile layout - 6 rows */}
+      {/* Medium layout - 3 rows (tablets/narrow screens) */}
+      <div className="alphabet alphabet-medium">
+        {mediumRows.map((row, i) => (
+          <div key={`medium-${i}`} className="alphabet-row">
+            {row.map(renderLetter)}
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile layout - 6 rows (small screens) */}
       <div className="alphabet alphabet-mobile">
         {mobileRows.map((row, i) => (
           <div key={`mobile-${i}`} className="alphabet-row">

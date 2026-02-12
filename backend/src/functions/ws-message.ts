@@ -9,11 +9,13 @@ import {
   PostToConnectionCommand
 } from '@aws-sdk/client-apigatewaymanagementapi';
 import { createLogger } from '../utils/logger.js';
+// import { MetricsService } from '../utils/metrics.js'; // Temporarily disabled
 
 const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT || '';
 const client = wsEndpoint ? new ApiGatewayManagementApiClient({ endpoint: wsEndpoint }) : null;
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
+  const startTime = Date.now();
   const logger = createLogger({ operation: 'ws-message' });
   const connectionId = event.requestContext.connectionId;
 
@@ -51,6 +53,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       logger.debug('Sent PONG response', { connectionId });
     }
 
+    // Track message latency (temporarily disabled)
+    // const latency = Date.now() - startTime;
+    // MetricsService.trackWebSocketMessageLatency(latency, messageType);
+
     return {
       statusCode: 200,
       body: JSON.stringify({ message: 'Message received' })
@@ -60,6 +66,11 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       connectionId,
       error: (err as Error).message
     });
+
+    // Track error metric (temporarily disabled)
+    // MetricsService.trackError('websocket_message_error', (err as Error).message, {
+    //   connectionId
+    // });
 
     return {
       statusCode: 500,

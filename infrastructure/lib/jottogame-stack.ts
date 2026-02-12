@@ -64,6 +64,8 @@ export class JottoGameStack extends cdk.Stack {
     const lambdaEnvironment = {
       TABLE_NAME: table.tableName,
       NODE_OPTIONS: '--enable-source-maps',
+      // Anthropic API key for LLM-powered AI
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
       // Datadog configuration (using Extension for efficient telemetry collection)
       DD_SITE: 'us5.datadoghq.com',
       DD_API_KEY_SECRET_ARN: datadogApiKeySecret.secretArn,

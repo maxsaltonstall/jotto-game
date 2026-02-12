@@ -6,6 +6,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-l
 import { sendDistributionMetric } from 'datadog-lambda-js';
 import { GameService } from '../services/GameService.js';
 import { WebSocketService } from '../services/WebSocketService.js';
+import { AIService } from '../services/AIService.js';
 import { success, error, parseBody } from '../utils/response.js';
 import type { MakeGuessRequest } from '../models/types.js';
 import { createLogger } from '../utils/logger.js';
@@ -15,6 +16,8 @@ import { wrapHandler } from '../utils/datadogWrapper.js';
 const wsEndpoint = process.env.WEBSOCKET_API_ENDPOINT;
 const webSocketService = wsEndpoint ? new WebSocketService(wsEndpoint) : undefined;
 const gameService = new GameService(undefined, undefined, webSocketService);
+const aiService = new AIService(gameService);
+gameService.setAIService(aiService);
 
 async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const startTime = Date.now();

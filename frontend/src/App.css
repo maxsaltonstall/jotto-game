@@ -340,6 +340,11 @@ main {
   display: flex;
 }
 
+/* Medium layout - hidden by default */
+.alphabet-medium {
+  display: none;
+}
+
 /* Mobile layout - hidden by default */
 .alphabet-mobile {
   display: none;
@@ -843,8 +848,12 @@ footer {
     width: 100%;
   }
 
-  /* Switch to mobile alphabet layout */
+  /* Switch to mobile alphabet layout (6 rows) */
   .alphabet-desktop {
+    display: none;
+  }
+
+  .alphabet-medium {
     display: none;
   }
 
@@ -871,6 +880,17 @@ footer {
 
   .alphabet-row {
     gap: 0.3rem;
+  }
+}
+
+/* Narrow screens - switch to 3-row alphabet (769px-1100px) */
+@media (max-width: 1100px) {
+  .alphabet-desktop {
+    display: none;
+  }
+
+  .alphabet-medium {
+    display: flex;
   }
 }
 

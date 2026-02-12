@@ -10,6 +10,7 @@ import { Alphabet } from './Alphabet';
 import { PostGameSummary } from './PostGameSummary';
 import { useAuth } from '../contexts/AuthContext';
 import { incrementGamesPlayed } from './InstallPrompt';
+import { RUMTracking } from '../utils/datadog-rum';
 
 interface GameBoardProps {
   gameId: string;
@@ -28,6 +29,11 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
   const [currentGuess, setCurrentGuess] = useState('');
   const [showSummary, setShowSummary] = useState(false);
 
+  // Track user in RUM
+  useEffect(() => {
+    RUMTracking.setUser(playerId, playerName);
+  }, [playerId, playerName]);
+
   // Refresh stats when game ends
   useEffect(() => {
     if (gameState?.game.status === 'COMPLETED' && !showSummary) {
@@ -35,8 +41,13 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
       refreshStats().catch(console.error);
       // Increment games played for install prompt tracking
       incrementGamesPlayed();
+
+      // Track game completion in RUM
+      const myGuesses = gameState.guesses.filter((g) => g.playerId === playerId);
+      const won = gameState.game.winnerId === playerId;
+      RUMTracking.trackGameCompleted(gameId, won, myGuesses.length);
     }
-  }, [gameState?.game.status, showSummary, refreshStats]);
+  }, [gameState?.game.status, showSummary, refreshStats, gameState?.guesses, gameState?.game.winnerId, gameId, playerId]);
 
   if (loading && !gameState) {
     return <div className="game-board">Loading game...</div>;
@@ -71,6 +82,9 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
       try {
         await api.joinGame(gameId, playerId, playerName, joinSecretWord, userId);
         await refetch();
+
+        // Track game joined in RUM
+        RUMTracking.trackGameJoined(gameId);
       } catch (err) {
         setJoinError(err instanceof Error ? err.message : 'Failed to join game');
       }
@@ -126,8 +140,11 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
   }
 
   const handleGuess = async (word: string) => {
-    await api.makeGuess(gameId, playerId, word);
+    const result = await api.makeGuess(gameId, playerId, word);
     await refetch();
+
+    // Track guess in RUM
+    RUMTracking.trackGuess(gameId, result.matchCount, result.isWinningGuess || false);
   };
 
   // Filter guesses by player

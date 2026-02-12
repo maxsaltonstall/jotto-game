@@ -6,6 +6,7 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { ConnectionRepository } from '../repositories/ConnectionRepository.js';
 import { createLogger } from '../utils/logger.js';
+// import { MetricsService } from '../utils/metrics.js'; // Temporarily disabled
 const connectionRepository = new ConnectionRepository();
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
@@ -23,7 +24,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
   try {
     logger.info('WebSocket connection closed', { connectionId });
 
-    // Delete connection from database
+    // Delete connection from database (we can't easily get gameId beforehand)
     await connectionRepository.deleteConnection(connectionId);
 
     return {
@@ -35,6 +36,11 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       connectionId,
       error: (err as Error).message
     });
+
+    // Track error metric (temporarily disabled)
+    // MetricsService.trackError('websocket_disconnect_error', (err as Error).message, {
+    //   connectionId
+    // });
 
     // Return 200 even on error - connection is already closed
     return {
