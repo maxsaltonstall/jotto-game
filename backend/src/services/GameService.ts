@@ -222,14 +222,18 @@ export class GameService {
 
       // Set winnerId to first player who completed (if not already set)
       const winnerId = game.winnerId || playerId;
-      const newStatus = bothPlayersCompleted ? 'COMPLETED' : 'ACTIVE';
+
+      // For AI games, end immediately when human player wins
+      // For human vs human games, continue until both complete
+      const shouldEndGame = bothPlayersCompleted || (game.isAiGame && playerId !== AI_PLAYER_ID);
+      const newStatus = shouldEndGame ? 'COMPLETED' : 'ACTIVE';
 
       await this.repository.updateGameState(gameId, {
         winnerId,
         player1Completed,
         player2Completed,
         status: newStatus,
-        currentTurn: bothPlayersCompleted ? undefined : game.currentTurn
+        currentTurn: shouldEndGame ? undefined : game.currentTurn
       });
 
       logger.info('Game state updated', {
@@ -249,8 +253,8 @@ export class GameService {
       // Track player completion
       MetricsService.trackPlayerCompleted(playerId, guessCount, !game.winnerId);
 
-      // If both players completed, track game completion
-      if (bothPlayersCompleted) {
+      // Track game completion when game ends
+      if (shouldEndGame) {
         const gameDuration = new Date().getTime() - new Date(game.createdAt).getTime();
         const totalGuesses = allGuesses.length;
 
@@ -267,7 +271,9 @@ export class GameService {
           winnerId,
           duration: gameDuration,
           totalGuesses,
-          winnerGuesses: guessCount
+          winnerGuesses: guessCount,
+          isAiGame: game.isAiGame,
+          endedEarly: game.isAiGame && !bothPlayersCompleted
         });
       }
 
