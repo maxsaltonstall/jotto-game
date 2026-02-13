@@ -7,6 +7,7 @@ import { api } from '../api/client';
 import { useOptimizedGameState } from '../hooks/useOptimizedGameState';
 import { GuessInput } from './GuessInput';
 import { Alphabet } from './Alphabet';
+import { MySuspectsPanel } from './MySuspectsPanel';
 import { PostGameSummary } from './PostGameSummary';
 import { useAuth } from '../contexts/AuthContext';
 import { incrementGamesPlayed } from './InstallPrompt';
@@ -28,6 +29,7 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
   const [joinError, setJoinError] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState('');
   const [showSummary, setShowSummary] = useState(false);
+  const [showSuspectsPanel, setShowSuspectsPanel] = useState(false);
 
   // Track user in RUM
   useEffect(() => {
@@ -223,6 +225,29 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
           return (
             <div className="input-section">
               <Alphabet guesses={myGuesses} currentGuess={currentGuess} />
+
+              {/* My Suspects Panel Toggle */}
+              <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                <button
+                  onClick={() => setShowSuspectsPanel(!showSuspectsPanel)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    border: '2px solid #667eea',
+                    background: showSuspectsPanel ? '#667eea' : 'white',
+                    color: showSuspectsPanel ? 'white' : '#667eea',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {showSuspectsPanel ? '🔍 Hide My Suspects' : '🔍 Show My Suspects'}
+                </button>
+              </div>
+
+              {/* My Suspects Panel */}
+              {showSuspectsPanel && <MySuspectsPanel />}
+
               {!isOnline && (
                 <p className="turn-indicator" style={{ color: '#dc3545' }}>
                   You are offline. Viewing cached game state.
