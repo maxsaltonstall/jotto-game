@@ -14,7 +14,7 @@ export const AI_PLAYER_ID = 'AI_PLAYER';
 export const AI_PLAYER_NAME = 'AI Bot 🤖';
 
 const MODEL = 'claude-3-5-haiku-20241022'; // Fast and cost-effective for this task
-const MAX_TOKENS = 100; // Small response needed
+const MAX_TOKENS = 150; // Increased for strategic reasoning
 
 export class AIService {
   private gameService: GameService;
@@ -180,25 +180,67 @@ export class AIService {
   }
 
   /**
-   * Build strategic prompt for Claude
+   * Build strategic prompt for Claude with enhanced game theory
    */
   private buildLLMPrompt(guessHistory: string): string {
-    return `You are playing Jotto, a word game where you guess a 5-letter secret word. After each guess, you learn how many letters match (same letter, same position).
+    const guessCount = guessHistory === 'No guesses yet' ? 0 : guessHistory.split('\n').length;
 
-VALID WORDS: You must choose from common 5-letter English words like: ${this.commonWords.slice(0, 20).join(', ')}, etc.
+    return `You are an expert Jotto player. Jotto is a word game where you guess a 5-letter secret word. After each guess, you learn how many letters match (SAME letter in SAME position).
+
+GAME RULES:
+- Secret word is a common 5-letter English word
+- Each guess reveals: number of letters that match (correct letter, correct position)
+- Example: Secret is BREAD, guess BREAK → 4 matches (B-R-E-A match, K doesn't)
+- Example: Secret is BREAD, guess CREAM → 2 matches (only R-E-A match positions 2,3, not E at position 3)
 
 YOUR PREVIOUS GUESSES:
 ${guessHistory}
 
-STRATEGY:
-- Use the match counts to eliminate impossible words
-- Pick words that test different letters
-- Avoid repeating guesses
-- Choose common English words
+STRATEGIC THINKING (apply these principles):
 
-Respond with ONLY a single 5-letter word in UPPERCASE, nothing else.
+${guessCount === 0 ? `
+FIRST GUESS - Maximize Information:
+- Choose a word with 5 DIFFERENT common letters (no repeated letters)
+- Best starting letters by frequency: E, T, A, O, I, N, S, H, R
+- Good starts: STARE, AROSE, IRATE, STERN, LATER, STONE, HEART
+- Avoid: words with repeated letters (GEESE, ALLEY) - waste information
+` : guessCount === 1 ? `
+SECOND GUESS - Isolate New Letters:
+- Analyze first guess: ${guessHistory.split('\n')[0]}
+- If 0 matches: All 5 letters are WRONG - avoid them entirely
+- If 1-2 matches: Some letters are right - test NEW letters to narrow down
+- If 3+ matches: You're close - try variations keeping confirmed positions
+- Choose a word with mostly NEW untested letters
+- Example: STARE → 2 matches? Try CLUMP (all new letters) to test more
+` : guessCount < 5 ? `
+MID-GAME - Constraint Satisfaction:
+- Build a mental model of which letters are IN and which positions
+- If guess had 0 matches: Those 5 letters are definitely NOT in the word
+- If guess had matches: Those letters might be correct - keep them in same positions
+- Test words that satisfy ALL previous constraints
+- Eliminate contradictions (e.g., if STARE → 0, don't guess TEARS)
+- Focus on untested letters in uncertain positions
+` : `
+LATE-GAME - Precision:
+- You have ${guessCount} guesses - analyze the pattern
+- Find letters that consistently appear in matching positions
+- Eliminate letters that never matched
+- Try words combining your highest-confidence letters
+- If stuck, try common words with frequent letter patterns
+`}
 
-Your next guess:`;
+CRITICAL RULES:
+1. NEVER repeat a previous guess
+2. Choose words with DIFFERENT letters than previously tested (unless matches suggest keeping them)
+3. Maximize new information per guess
+4. Use common English words only
+5. If a guess had 0 matches, NONE of those letters are in the secret word - avoid them!
+
+VALID WORD LIST (choose from these): ${this.commonWords.slice(0, 30).join(', ')}, and other common 5-letter words
+
+RESPONSE FORMAT: Reply with ONLY the uppercase 5-letter word, nothing else.
+
+Your strategic next guess:`;
   }
 
   /**
