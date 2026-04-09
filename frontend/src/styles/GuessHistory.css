@@ -1,0 +1,110 @@
+.guess-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.guess-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.guess-tiles {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+}
+
+.guess-tile {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text);
+  padding: var(--space-sm) 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  min-width: 32px;
+  text-align: center;
+}
+
+.guess-badge {
+  background: var(--color-accent);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.guess-badge-win {
+  background: var(--color-letter-confirmed);
+}
+
+.guess-winner .guess-tile {
+  background: var(--color-letter-confirmed);
+  color: white;
+}
+
+.guess-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-lg);
+}
+
+.opponent-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.opponent-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.opponent-word {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  letter-spacing: 2px;
+  font-weight: 500;
+}
+
+.opponent-badge {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.opponent-winner {
+  background: rgba(106, 170, 100, 0.1);
+}
+
+.opponent-winner .opponent-badge {
+  color: var(--color-letter-confirmed);
+}
+
+@media (max-width: 480px) {
+  .guess-tile {
+    padding: var(--space-xs) 7px;
+    font-size: var(--font-size-xs);
+    min-width: 26px;
+  }
+
+  .guess-badge {
+    width: 24px;
+    height: 24px;
+    font-size: var(--font-size-xs);
+  }
+}

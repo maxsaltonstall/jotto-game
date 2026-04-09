@@ -286,19 +286,9 @@ function Game() {
 
   return (
     <div className="app">
-      <header>
-        <h1>Jotto</h1>
-        <p className="subtitle">A Word Guessing Game</p>
-        <p className="player-id">Player: {playerName}</p>
-      </header>
-
       <main>
         <GameBoard gameId={gameId} playerId={playerId} playerName={playerName} userId={userId || undefined} onLeaveGame={handleLeaveGame} />
       </main>
-
-      <footer>
-        <p>How to play: Guess your opponent's 5-letter word. After each guess, you'll see how many letters match (regardless of position).</p>
-      </footer>
     </div>
   );
 }
