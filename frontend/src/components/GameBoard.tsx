@@ -85,14 +85,14 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
 
   if (game.status === 'WAITING') {
     return (
-      <div className="card" style={{ textAlign: 'center' }}>
+      <div className="card game-waiting">
         <h2>Waiting for Opponent</h2>
         <InviteLink gameId={gameId} />
         <div className="waiting-indicator">
           <p>Waiting for opponent to join...</p>
           <div className="waiting-bar"><div className="waiting-bar-fill" /></div>
         </div>
-        <button onClick={onLeaveGame} style={{ marginTop: '1rem' }}>Cancel Game</button>
+        <button className="btn-cancel" onClick={onLeaveGame}>Cancel Game</button>
       </div>
     );
   }

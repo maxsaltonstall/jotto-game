@@ -146,6 +146,14 @@
   margin-bottom: var(--space-md);
 }
 
+.game-join-form label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
 .game-join-form input {
   width: 100%;
   border: 2px solid var(--color-border);
@@ -157,6 +165,14 @@
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-size-base);
   box-sizing: border-box;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.game-join-form input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .game-join-form button {
@@ -173,6 +189,35 @@
 .game-join-form button.secondary {
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
+}
+
+.game-join-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Waiting for opponent screen */
+.game-waiting {
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.game-waiting h2 {
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+  margin-bottom: var(--space-lg);
+}
+
+.btn-cancel {
+  margin-top: var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 768px) {
