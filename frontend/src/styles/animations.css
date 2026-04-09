@@ -1,0 +1,20 @@
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes tile-glow {
+  0% { transform: scale(1); box-shadow: none; }
+  50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(106, 170, 100, 0.5); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+@keyframes flip-reveal {
+  0% { transform: rotateX(90deg); opacity: 0; }
+  100% { transform: rotateX(0); opacity: 1; }
+}
