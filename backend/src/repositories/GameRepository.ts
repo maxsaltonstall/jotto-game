@@ -27,11 +27,20 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 const TABLE_NAME = process.env.TABLE_NAME || 'JottoGameTable';
 
+const TTL_DAYS_SHORT = 7;   // WAITING and COMPLETED games
+const TTL_DAYS_ACTIVE = 30; // ACTIVE games (safety net)
+
+function ttlFromNow(days: number): number {
+  return Math.floor(Date.now() / 1000) + (days * 24 * 60 * 60);
+}
+
 export class GameRepository {
   /**
    * Create a new game
    */
   async createGame(game: GameWithSecrets): Promise<void> {
+    const ttl = ttlFromNow(TTL_DAYS_SHORT);
+
     const gameItem: GameItem = {
       PK: `GAME#${game.gameId}`,
       SK: 'METADATA',
@@ -46,7 +55,8 @@ export class GameRepository {
       isAiGame: game.isAiGame || false,
       currentTurn: game.currentTurn,
       createdAt: game.createdAt,
-      updatedAt: game.updatedAt
+      updatedAt: game.updatedAt,
+      ttl
     };
 
     const playerIndex: PlayerGameIndex = {
@@ -54,7 +64,8 @@ export class GameRepository {
       SK: `GAME#${game.gameId}`,
       gameId: game.gameId,
       playerId: game.player1Id,
-      createdAt: game.createdAt
+      createdAt: game.createdAt,
+      ttl
     };
 
     await Promise.all([
@@ -116,12 +127,15 @@ export class GameRepository {
     player2Secret: string,
     timestamp: string
   ): Promise<void> {
+    const activeTtl = ttlFromNow(TTL_DAYS_ACTIVE);
+
     const playerIndex: PlayerGameIndex = {
       PK: `PLAYER#${player2Id}`,
       SK: `GAME#${gameId}`,
       gameId: gameId,
       playerId: player2Id,
-      createdAt: timestamp
+      createdAt: timestamp,
+      ttl: activeTtl
     };
 
     await Promise.all([
@@ -131,9 +145,10 @@ export class GameRepository {
           PK: `GAME#${gameId}`,
           SK: 'METADATA'
         },
-        UpdateExpression: 'SET player2Id = :p2id, player2Name = :p2name, player2Secret = :p2secret, #status = :status, GSI1PK = :gsi1pk, updatedAt = :updated' + (player2UserId ? ', player2UserId = :p2userid' : ''),
+        UpdateExpression: 'SET player2Id = :p2id, player2Name = :p2name, player2Secret = :p2secret, #status = :status, GSI1PK = :gsi1pk, updatedAt = :updated, #ttl = :ttl' + (player2UserId ? ', player2UserId = :p2userid' : ''),
         ExpressionAttributeNames: {
-          '#status': 'status'
+          '#status': 'status',
+          '#ttl': 'ttl'
         },
         ExpressionAttributeValues: {
           ':p2id': player2Id,
@@ -142,6 +157,7 @@ export class GameRepository {
           ':status': 'ACTIVE',
           ':gsi1pk': 'STATUS#ACTIVE',
           ':updated': timestamp,
+          ':ttl': activeTtl,
           ...(player2UserId ? { ':p2userid': player2UserId } : {})
         }
       })),
@@ -194,6 +210,11 @@ export class GameRepository {
       updateExpressions.push('#status = :status, GSI1PK = :gsi1pk');
       expressionAttributeValues[':status'] = updates.status;
       expressionAttributeValues[':gsi1pk'] = `STATUS#${updates.status}`;
+
+      if (updates.status === 'COMPLETED') {
+        updateExpressions.push('#ttl = :ttl');
+        expressionAttributeValues[':ttl'] = ttlFromNow(TTL_DAYS_SHORT);
+      }
     }
 
     await docClient.send(new UpdateCommand({
@@ -203,7 +224,9 @@ export class GameRepository {
         SK: 'METADATA'
       },
       UpdateExpression: updateExpressions.join(', '),
-      ExpressionAttributeNames: updates.status !== undefined ? { '#status': 'status' } : undefined,
+      ExpressionAttributeNames: updates.status !== undefined
+        ? { '#status': 'status', ...(updates.status === 'COMPLETED' ? { '#ttl': 'ttl' } : {}) }
+        : undefined,
       ExpressionAttributeValues: expressionAttributeValues
     }));
   }
@@ -220,7 +243,8 @@ export class GameRepository {
       guessWord: guess.guessWord,
       matchCount: guess.matchCount,
       timestamp: guess.timestamp,
-      isWinningGuess: guess.isWinningGuess
+      isWinningGuess: guess.isWinningGuess,
+      ttl: ttlFromNow(TTL_DAYS_ACTIVE)
     };
 
     await docClient.send(new PutCommand({

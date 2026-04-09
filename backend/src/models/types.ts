@@ -90,6 +90,7 @@ export interface GameItem {
   isAiGame?: boolean;   // True if Player 2 is AI
   createdAt: string;
   updatedAt: string;
+  ttl?: number;         // DynamoDB TTL (Unix epoch seconds)
 }
 
 export interface GuessItem {
@@ -101,6 +102,7 @@ export interface GuessItem {
   matchCount: number;
   timestamp: string;
   isWinningGuess: boolean;
+  ttl?: number;         // DynamoDB TTL (Unix epoch seconds)
 }
 
 export interface PlayerGameIndex {
@@ -109,4 +111,5 @@ export interface PlayerGameIndex {
   gameId: string;
   playerId: string;
   createdAt: string;
+  ttl?: number;         // DynamoDB TTL (Unix epoch seconds)
 }

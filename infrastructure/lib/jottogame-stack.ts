@@ -29,7 +29,8 @@ export class JottoGameStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // For dev/demo - use RETAIN in production
-      pointInTimeRecovery: false // Enable in production
+      pointInTimeRecovery: false, // Enable in production
+      timeToLiveAttribute: 'ttl'
     });
 
     // GSI for listing games by status
