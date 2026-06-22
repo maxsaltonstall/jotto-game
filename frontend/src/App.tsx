@@ -123,7 +123,8 @@ function Home() {
 
   const handleJoinByCode = () => {
     if (joinCode.trim()) {
-      navigate(`/game/${joinCode.trim()}`);
+      const normalized = joinCode.trim().toLowerCase().replace(/[\s_]+/g, '-');
+      navigate(`/game/${normalized}`);
     }
   };
 
@@ -201,7 +202,7 @@ function Home() {
                 <div className="join-row">
                   <input
                     type="text"
-                    placeholder="Enter game code"
+                    placeholder="snake-table-grant"
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleJoinByCode()}
@@ -255,7 +256,8 @@ function Home() {
 }
 
 function Game() {
-  const { gameId } = useParams<{ gameId: string }>();
+  const { gameId: rawGameId } = useParams<{ gameId: string }>();
+  const gameId = rawGameId ? rawGameId.toLowerCase().replace(/[\s_]+/g, '-') : rawGameId;
   const navigate = useNavigate();
   const { userId } = useAuth();
   const [playerId, setPlayerId] = useState<string>('');

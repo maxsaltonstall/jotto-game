@@ -17,10 +17,11 @@ const gameService = new GameService(undefined, undefined, webSocketService);
 
 async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   try {
-    const gameId = event.pathParameters?.gameId;
-    if (!gameId) {
+    const rawGameId = event.pathParameters?.gameId;
+    if (!rawGameId) {
       return error(new Error('Game ID is required'), 400);
     }
+    const gameId = rawGameId.toLowerCase().replace(/[\s_]+/g, '-');
 
     const request = parseBody<JoinGameRequest>(event.body);
 

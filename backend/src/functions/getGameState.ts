@@ -14,7 +14,8 @@ const gameService = new GameService();
 
 async function handlerImpl(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const startTime = Date.now();
-  const gameId = event.pathParameters?.gameId;
+  const rawGameId = event.pathParameters?.gameId;
+  const gameId = rawGameId ? rawGameId.toLowerCase().replace(/[\s_]+/g, '-') : rawGameId;
   const logger = createLogger({ operation: 'getGameState', gameId });
 
   try {
