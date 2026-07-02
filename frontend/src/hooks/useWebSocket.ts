@@ -160,7 +160,26 @@ export function useWebSocket(
     };
   }, [gameId, playerId, playerName]); // Removed fetchGameState and handleWebSocketMessage to prevent reconnection loop
 
-  // Note: Removed visibility change REST fallback - WebSocket only
+  // Resync on tab visibility regain: the browser can suspend a backgrounded
+  // tab's WebSocket without firing onclose, leaving connectionStatus stuck
+  // reporting 'connected' for a socket that's actually dead. Always refetch
+  // via REST (ignoring the possibly-stale connectionStatus) and reconnect
+  // the socket if it isn't really open.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchGameState();
+        if (!wsClientRef.current?.isHealthy()) {
+          wsClientRef.current?.reconnectNow();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchGameState]);
 
   return {
     gameState,

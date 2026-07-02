@@ -15,29 +15,40 @@ vi.mock('../../api/client', () => ({
 }));
 
 // Mock WebSocket client
+export const mockIsHealthy = vi.fn(() => true);
+export const mockReconnectNow = vi.fn();
+
 vi.mock('../../api/websocket', () => ({
   WebSocketClient: class MockWebSocketClient {
     private handlers: any = {};
-    
+
     connect() {
       // Simulate successful connection
       setTimeout(() => {
         this.handlers.connected?.({});
       }, 100);
     }
-    
+
     disconnect() {}
-    
+
     on(event: string, handler: Function) {
       this.handlers[event] = handler;
     }
-    
+
     off() {}
-    
+
     getStatus() {
       return 'connected';
     }
-    
+
+    isHealthy() {
+      return mockIsHealthy();
+    }
+
+    reconnectNow() {
+      mockReconnectNow();
+    }
+
     // Test helper to simulate messages
     simulateMessage(message: any) {
       this.handlers.message?.(message);
@@ -216,6 +227,90 @@ describe('useWebSocket', () => {
       // the component should re-render immediately
       // This test documents the expected behavior to prevent the regression
       // where manual page reload was needed to see turn updates
+    });
+  });
+
+  describe('Visibility Resync', () => {
+    beforeEach(() => {
+      mockIsHealthy.mockReset().mockReturnValue(true);
+      mockReconnectNow.mockReset();
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible'
+      });
+    });
+
+    it('should refetch game state when the tab becomes visible', async () => {
+      renderHook(() => useWebSocket('game-123', 'player-456', 'TestUser'));
+
+      await waitFor(() => {
+        expect(clientModule.api.getGameState).toHaveBeenCalled();
+      });
+
+      vi.mocked(clientModule.api.getGameState).mockClear();
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await waitFor(() => {
+        expect(clientModule.api.getGameState).toHaveBeenCalledWith(
+          'game-123',
+          'player-456'
+        );
+      });
+    });
+
+    it('should not reconnect when the socket is healthy', async () => {
+      mockIsHealthy.mockReturnValue(true);
+      renderHook(() => useWebSocket('game-123', 'player-456', 'TestUser'));
+
+      await waitFor(() => {
+        expect(clientModule.api.getGameState).toHaveBeenCalled();
+      });
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await waitFor(() => {
+        expect(mockIsHealthy).toHaveBeenCalled();
+      });
+      expect(mockReconnectNow).not.toHaveBeenCalled();
+    });
+
+    it('should reconnect when the socket is unhealthy', async () => {
+      mockIsHealthy.mockReturnValue(false);
+      renderHook(() => useWebSocket('game-123', 'player-456', 'TestUser'));
+
+      await waitFor(() => {
+        expect(clientModule.api.getGameState).toHaveBeenCalled();
+      });
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await waitFor(() => {
+        expect(mockReconnectNow).toHaveBeenCalled();
+      });
+    });
+
+    it('should do nothing when the tab becomes hidden', async () => {
+      renderHook(() => useWebSocket('game-123', 'player-456', 'TestUser'));
+
+      await waitFor(() => {
+        expect(clientModule.api.getGameState).toHaveBeenCalled();
+      });
+
+      vi.mocked(clientModule.api.getGameState).mockClear();
+      mockIsHealthy.mockClear();
+
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden'
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      // Give any (incorrect) async handling a chance to run before asserting
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(clientModule.api.getGameState).not.toHaveBeenCalled();
+      expect(mockIsHealthy).not.toHaveBeenCalled();
     });
   });
 });
