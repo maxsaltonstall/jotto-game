@@ -1,17 +1,18 @@
-/**
- * Main game board component
- */
-
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useOptimizedGameState } from '../hooks/useOptimizedGameState';
+import { GameHeader } from './GameHeader';
+import { GuessHistory } from './GuessHistory';
+import { OpponentProgress } from './OpponentProgress';
 import { GuessInput } from './GuessInput';
 import { Alphabet } from './Alphabet';
-import { MySuspectsPanel } from './MySuspectsPanel';
 import { PostGameSummary } from './PostGameSummary';
+import { InviteLink } from './InviteLink';
 import { useAuth } from '../contexts/AuthContext';
 import { incrementGamesPlayed } from './InstallPrompt';
 import { RUMTracking } from '../utils/datadog-rum';
+import '../styles/GameBoard.css';
+import '../styles/GuessHistory.css';
 
 interface GameBoardProps {
   gameId: string;
@@ -22,121 +23,76 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }: GameBoardProps) {
-  // Use optimized game state with React Query caching + WebSocket real-time updates
   const { gameState, loading, error, isOnline, refetch } = useOptimizedGameState(gameId, playerId, playerName);
   const { refreshStats } = useAuth();
   const [joinSecretWord, setJoinSecretWord] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState('');
   const [showSummary, setShowSummary] = useState(false);
-  const [showSuspectsPanel, setShowSuspectsPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<'mine' | 'opponent'>('mine');
 
-  // Track user in RUM
   useEffect(() => {
     RUMTracking.setUser(playerId, playerName);
   }, [playerId, playerName]);
 
-  // Refresh stats when game ends
   useEffect(() => {
     if (gameState?.game.status === 'COMPLETED' && !showSummary) {
       setShowSummary(true);
       refreshStats().catch(console.error);
-      // Increment games played for install prompt tracking
       incrementGamesPlayed();
-
-      // Track game completion in RUM
       const myGuesses = gameState.guesses.filter((g) => g.playerId === playerId);
       const won = gameState.game.winnerId === playerId;
       RUMTracking.trackGameCompleted(gameId, won, myGuesses.length);
     }
   }, [gameState?.game.status, showSummary, refreshStats, gameState?.guesses, gameState?.game.winnerId, gameId, playerId]);
 
-  if (loading && !gameState) {
-    return <div className="game-board">Loading game...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="game-board error">
-        <p>Error: {error}</p>
-        <button onClick={onLeaveGame}>Back</button>
-      </div>
-    );
-  }
-
-  if (!gameState) {
-    return <div className="game-board">Game not found</div>;
-  }
+  if (loading && !gameState) return <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>Loading game...</div>;
+  if (error) return <div className="card"><p className="error">{error}</p><button onClick={onLeaveGame}>Back</button></div>;
+  if (!gameState) return <div className="card">Game not found</div>;
 
   const { game, guesses, myTurn } = gameState;
+  const myGuesses = guesses.filter((g) => g.playerId === playerId);
+  const opponentGuesses = guesses.filter((g) => g.playerId !== playerId);
+  const opponentName = game.player1Id === playerId ? (game.player2Name || 'Opponent') : game.player1Name;
+  const turnCount = myGuesses.length + 1;
 
-  // Player needs to join the game
   if (game.status === 'WAITING' && game.player1Id !== playerId) {
     const handleJoin = async (e: React.FormEvent) => {
       e.preventDefault();
       setJoinError(null);
-
-      if (joinSecretWord.length !== 5) {
-        setJoinError('Secret word must be exactly 5 letters');
-        return;
-      }
-
+      if (joinSecretWord.length !== 5) { setJoinError('Secret word must be exactly 5 letters'); return; }
       try {
         await api.joinGame(gameId, playerId, playerName, joinSecretWord, userId);
         await refetch();
-
-        // Track game joined in RUM
         RUMTracking.trackGameJoined(gameId);
       } catch (err) {
         setJoinError(err instanceof Error ? err.message : 'Failed to join game');
       }
     };
-
     return (
-      <div className="game-board">
+      <div className="card game-join-form">
         <h2>Join Game</h2>
         <form onSubmit={handleJoin}>
-          <div>
-            <label htmlFor="joinSecret">Your Secret Word (5 letters):</label>
-            <input
-              id="joinSecret"
-              type="text"
-              value={joinSecretWord}
-              onChange={(e) => setJoinSecretWord(e.target.value.toUpperCase())}
-              maxLength={5}
-              placeholder="BREAD"
-              autoComplete="off"
-            />
-          </div>
+          <label htmlFor="joinSecret">Your Secret Word (5 letters):</label>
+          <input id="joinSecret" type="text" value={joinSecretWord} onChange={(e) => setJoinSecretWord(e.target.value.toUpperCase())} maxLength={5} placeholder="BREAD" autoComplete="off" />
           {joinError && <div className="error">{joinError}</div>}
-          <button type="submit" disabled={joinSecretWord.length !== 5}>
-            Join Game
-          </button>
+          <button type="submit" disabled={joinSecretWord.length !== 5}>Join Game</button>
+          <button type="button" className="secondary" onClick={onLeaveGame}>Cancel</button>
         </form>
-        <button onClick={onLeaveGame}>Cancel</button>
       </div>
     );
   }
 
-  // Waiting for player 2
   if (game.status === 'WAITING') {
-    const handleCopyGameId = () => {
-      navigator.clipboard.writeText(gameId);
-      alert('Game ID copied to clipboard!');
-    };
-
     return (
-      <div className="game-board">
+      <div className="card game-waiting">
         <h2>Waiting for Opponent</h2>
-        <div className="game-id-section">
-          <p className="game-id-label">Game ID:</p>
-          <code className="game-id">{gameId}</code>
-          <button onClick={handleCopyGameId} className="copy-button">
-            📋 Copy Game ID
-          </button>
+        <InviteLink gameId={gameId} />
+        <div className="waiting-indicator">
+          <p>Waiting for opponent to join...</p>
+          <div className="waiting-bar"><div className="waiting-bar-fill" /></div>
         </div>
-        <p className="instruction">Share this Game ID with a friend so they can join!</p>
-        <button onClick={onLeaveGame}>Cancel Game</button>
+        <button className="btn-cancel" onClick={onLeaveGame}>Cancel Game</button>
       </div>
     );
   }
@@ -144,140 +100,61 @@ export function GameBoard({ gameId, playerId, playerName, userId, onLeaveGame }:
   const handleGuess = async (word: string) => {
     const result = await api.makeGuess(gameId, playerId, word);
     await refetch();
-
-    // Track guess in RUM
     RUMTracking.trackGuess(gameId, result.matchCount, result.isWinningGuess || false);
   };
 
-  // Filter guesses by player
-  const myGuesses = guesses.filter((g) => g.playerId === playerId);
-  const opponentGuesses = guesses.filter((g) => g.playerId !== playerId);
-
-  const opponentName = game.player1Id === playerId ? game.player2Name : game.player1Name;
-  const isAiOpponent = opponentName?.includes('🤖') || opponentName?.includes('AI Bot');
+  const iAmPlayer1 = game.player1Id === playerId;
+  const iCompleted = iAmPlayer1 ? game.player1Completed : game.player2Completed;
 
   return (
-    <div className="game-board">
-      <div className="game-header">
-        <h2>Jotto Game</h2>
-        <div className="game-info">
-          <p>Game ID: {gameId}</p>
-          <p>Status: {game.status}</p>
-          {game.winnerId && (
-            <p className="winner">
-              {game.status === 'COMPLETED' ? (
-                <>Winner: {game.winnerId === playerId ? 'You!' : opponentName || 'Opponent'}</>
-              ) : (
-                game.winnerId === playerId ? (
-                  <>🎉 You finished first! Waiting for {opponentName || 'opponent'} to complete...</>
+    <div>
+      <GameHeader opponentName={opponentName} turnCount={turnCount} isMyTurn={myTurn} onLeave={onLeaveGame} />
+
+      <div className="game-tabs">
+        <button className={`game-tab ${activeTab === 'mine' ? 'active' : ''}`} onClick={() => setActiveTab('mine')}>Your Guesses</button>
+        <button className={`game-tab ${activeTab === 'opponent' ? 'active' : ''}`} onClick={() => setActiveTab('opponent')}>Opponent ({opponentGuesses.length})</button>
+      </div>
+
+      <div className="game-columns">
+        <div className={`game-main ${activeTab === 'opponent' ? 'hidden' : ''}`}>
+          <div className="section-label">Your Guesses</div>
+          <div className="card">
+            <GuessHistory guesses={myGuesses} />
+
+            {game.status === 'ACTIVE' && !iCompleted && (
+              <div>
+                {!isOnline && <p className="turn-indicator" style={{ color: 'var(--color-error)' }}>You are offline. Viewing cached game state.</p>}
+                {myTurn ? (
+                  <>
+                    <p className="turn-indicator">Your turn!</p>
+                    <GuessInput onSubmit={handleGuess} disabled={!isOnline} onGuessChange={setCurrentGuess} />
+                  </>
                 ) : (
-                  <>{opponentName || 'Opponent'} finished first! Keep guessing to complete the game.</>
-                )
-              )}
-            </p>
-          )}
-        </div>
-        <button onClick={onLeaveGame}>Leave Game</button>
-      </div>
-
-      <div className="game-content">
-        <div className="guesses-section">
-          <div className="my-guesses">
-            <h3>Your Guesses</h3>
-            {myGuesses.length === 0 ? (
-              <p>No guesses yet</p>
-            ) : (
-              <ul>
-                {myGuesses.map((g, i) => (
-                  <li key={i} className={g.isWinningGuess ? 'winning' : ''}>
-                    <span className="word">{g.guessWord}</span>
-                    <span className="matches">{g.matchCount} matches</span>
-                    {g.isWinningGuess && <span className="badge">Winner!</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="opponent-guesses">
-            <h3>{isAiOpponent ? '🤖 ' : ''}{opponentName || 'Opponent'}'s Guesses</h3>
-            {opponentGuesses.length === 0 ? (
-              <p>No guesses yet</p>
-            ) : (
-              <ul>
-                {opponentGuesses.map((g, i) => (
-                  <li key={i} className={g.isWinningGuess ? 'winning' : ''}>
-                    <span className="word">{g.guessWord}</span>
-                    <span className="matches">{g.matchCount} matches</span>
-                    {g.isWinningGuess && <span className="badge">Winner!</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {game.status === 'ACTIVE' && (() => {
-          const iAmPlayer1 = game.player1Id === playerId;
-          const iCompleted = iAmPlayer1 ? game.player1Completed : game.player2Completed;
-          const opponentCompleted = iAmPlayer1 ? game.player2Completed : game.player1Completed;
-
-          return (
-            <div className="input-section">
-              <Alphabet guesses={myGuesses} currentGuess={currentGuess} />
-
-              {/* My Suspects Panel Toggle */}
-              <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                <button
-                  onClick={() => setShowSuspectsPanel(!showSuspectsPanel)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    border: '2px solid #667eea',
-                    background: showSuspectsPanel ? '#667eea' : 'white',
-                    color: showSuspectsPanel ? 'white' : '#667eea',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {showSuspectsPanel ? '🔍 Hide My Suspects' : '🔍 Show My Suspects'}
-                </button>
+                  <p className="turn-indicator">Waiting for opponent...</p>
+                )}
               </div>
+            )}
 
-              {/* My Suspects Panel */}
-              {showSuspectsPanel && <MySuspectsPanel />}
+            {game.status === 'ACTIVE' && iCompleted && (
+              <p className="turn-indicator" style={{ color: 'var(--color-success)' }}>You've finished! Waiting for opponent...</p>
+            )}
+          </div>
+        </div>
 
-              {!isOnline && (
-                <p className="turn-indicator" style={{ color: '#dc3545' }}>
-                  You are offline. Viewing cached game state.
-                </p>
-              )}
-              {iCompleted ? (
-                <p className="turn-indicator" style={{ color: '#28a745' }}>
-                  ✅ You've completed your guesses! {opponentCompleted ? 'Both players finished!' : `Waiting for ${opponentName || 'opponent'} to finish...`}
-                </p>
-              ) : myTurn ? (
-                <>
-                  <p className="turn-indicator">{isOnline ? 'Your turn!' : 'Your turn (offline - reconnect to play)'}</p>
-                  <GuessInput onSubmit={handleGuess} disabled={!isOnline} onGuessChange={setCurrentGuess} />
-                </>
-              ) : (
-                <p className="turn-indicator">Waiting for opponent...</p>
-              )}
-            </div>
-          );
-        })()}
-
-        {game.status === 'COMPLETED' && showSummary && (
-          <PostGameSummary
-            game={game}
-            playerId={playerId}
-            guessCount={myGuesses.length}
-            onPlayAgain={onLeaveGame}
-          />
-        )}
+        <div className={`game-sidebar ${activeTab === 'opponent' ? 'visible' : ''}`}>
+          <OpponentProgress guesses={opponentGuesses} opponentName={opponentName} />
+        </div>
       </div>
+
+      {game.status === 'ACTIVE' && (
+        <div style={{ marginTop: 'var(--space-md)' }}>
+          <Alphabet guesses={myGuesses} currentGuess={currentGuess} />
+        </div>
+      )}
+
+      {game.status === 'COMPLETED' && showSummary && (
+        <PostGameSummary game={game} playerId={playerId} guessCount={myGuesses.length} onPlayAgain={onLeaveGame} />
+      )}
     </div>
   );
 }

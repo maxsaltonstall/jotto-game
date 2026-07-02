@@ -12,19 +12,10 @@ import type { Game, Guess } from '../models/types.js';
 import type { WebSocketMessage } from '../models/websocket-types.js';
 import { logger } from '../utils/logger.js';
 
-interface PendingBroadcast {
-  gameId: string;
-  game: Game;
-  guesses: Guess[];
-  timeout: NodeJS.Timeout;
-}
-
 export class WebSocketService {
   private client: ApiGatewayManagementApiClient | null;
   private connectionRepository: ConnectionRepository;
   private wsEndpoint: string;
-  private pendingBroadcasts: Map<string, PendingBroadcast> = new Map();
-  private readonly DEBOUNCE_MS = 500; // Batch broadcasts within 500ms window
 
   constructor(wsEndpoint?: string, connectionRepository?: ConnectionRepository) {
     this.wsEndpoint = wsEndpoint || process.env.WEBSOCKET_API_ENDPOINT || '';
@@ -42,7 +33,6 @@ export class WebSocketService {
 
   /**
    * Broadcast game update to all players in a game
-   * Debounced by 500ms to batch rapid successive updates
    */
   async broadcastGameUpdate(
     gameId: string,
@@ -54,44 +44,6 @@ export class WebSocketService {
       return;
     }
 
-    // Clear existing timeout for this game if any
-    const existing = this.pendingBroadcasts.get(gameId);
-    if (existing) {
-      clearTimeout(existing.timeout);
-      logger.debug('Cleared pending broadcast, batching updates', { gameId });
-    }
-
-    // Schedule new broadcast after debounce period
-    const timeout = setTimeout(() => {
-      this.doBroadcastGameUpdate(gameId, game, guesses)
-        .catch(error => {
-          logger.error('Error in debounced broadcast', {
-            gameId,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        })
-        .finally(() => {
-          this.pendingBroadcasts.delete(gameId);
-        });
-    }, this.DEBOUNCE_MS);
-
-    // Store pending broadcast
-    this.pendingBroadcasts.set(gameId, { gameId, game, guesses, timeout });
-
-    logger.debug('Scheduled debounced broadcast', {
-      gameId,
-      debounceMs: this.DEBOUNCE_MS
-    });
-  }
-
-  /**
-   * Internal method to actually perform the broadcast
-   */
-  private async doBroadcastGameUpdate(
-    gameId: string,
-    game: Game,
-    guesses: Guess[]
-  ): Promise<void> {
     const connections = await this.connectionRepository.getConnectionsByGameId(gameId);
 
     if (connections.length === 0) {

@@ -1,131 +1,81 @@
-/**
- * Alphabet component - shows letter usage and status
- */
-
-import { Guess } from '../api/client';
+import { useState } from 'react';
+import type { Guess } from '../api/client';
+import '../styles/Alphabet.css';
 
 interface AlphabetProps {
   guesses: Guess[];
   currentGuess?: string;
 }
 
-type LetterState = 'unused' | 'used' | 'excluded' | 'confirmed' | 'pending';
+type LetterState = 'unused' | 'maybe' | 'confirmed' | 'eliminated' | 'pending';
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const CYCLE_ORDER: LetterState[] = ['unused', 'maybe', 'confirmed', 'eliminated'];
 
 export function Alphabet({ guesses, currentGuess = '' }: AlphabetProps) {
-  // Desktop: 2 rows (wide screens)
-  const desktopRows = [
-    'ABCDEFGHIJKLM'.split(''),
-    'NOPQRSTUVWXYZ'.split('')
-  ];
+  const [manualStates, setManualStates] = useState<Record<string, LetterState>>({});
 
-  // Tablet/Narrow: 3 rows (medium screens)
-  const mediumRows = [
-    'ABCDEFGHI'.split(''),
-    'JKLMNOPQR'.split(''),
-    'STUVWXYZ'.split('')
-  ];
-
-  // Mobile: 6 rows of 4-5 letters each (small screens)
-  const mobileRows = [
-    'ABCD'.split(''),
-    'EFGH'.split(''),
-    'IJKL'.split(''),
-    'MNOP'.split(''),
-    'QRSTU'.split(''),
-    'VWXYZ'.split('')
-  ];
-
-  // Calculate the state and usage count of each letter
-  const getLetterInfo = (letter: string): { state: LetterState; count: number } => {
-    let count = 0;
+  const getAutoState = (letter: string): LetterState => {
+    let used = false;
     let excluded = false;
     let confirmed = false;
 
-    // Check if this letter is in the current guess being typed
-    const isInCurrentGuess = currentGuess.toUpperCase().includes(letter);
-
     for (const guess of guesses) {
-      const guessWord = guess.guessWord.toUpperCase();
-
-      // Count occurrences of this letter in the guess
-      for (const char of guessWord) {
-        if (char === letter) {
-          count++;
-        }
-      }
-
-      if (guessWord.includes(letter)) {
-        // If this guess had 5 matches (winning guess), these letters are confirmed
-        if (guess.matchCount === 5) {
-          confirmed = true;
-        }
-
-        // If this guess had 0 matches, all letters in it are excluded
-        if (guess.matchCount === 0) {
-          excluded = true;
-        }
+      const word = guess.guessWord.toUpperCase();
+      if (word.includes(letter)) {
+        used = true;
+        if (guess.matchCount === 5) confirmed = true;
+        if (guess.matchCount === 0) excluded = true;
       }
     }
 
-    let state: LetterState = 'unused';
-    if (confirmed) state = 'confirmed';
-    else if (excluded) state = 'excluded';
-    else if (count > 0) state = 'used';
-
-    // Override with pending state if currently being typed
-    if (isInCurrentGuess && !confirmed) {
-      state = 'pending';
-    }
-
-    return { state, count };
+    if (confirmed) return 'confirmed';
+    if (excluded) return 'eliminated';
+    if (used) return 'maybe';
+    return 'unused';
   };
 
-  const renderLetter = (letter: string) => {
-    const { state, count } = getLetterInfo(letter);
-    const displayDots = Math.min(count, 5); // Max 5 dots
+  const getDisplayState = (letter: string): LetterState => {
+    if (currentGuess.toUpperCase().includes(letter)) return 'pending';
+    if (manualStates[letter]) return manualStates[letter];
+    return getAutoState(letter);
+  };
 
-    return (
-      <span key={letter} className={`letter letter-${state}`} data-letter={letter}>
-        <span className="letter-char">{letter}</span>
-        {count > 0 && (
-          <span className="letter-dots">
-            {Array.from({ length: displayDots }).map((_, i) => (
-              <span key={i} className="dot" />
-            ))}
-          </span>
-        )}
-      </span>
-    );
+  const handleClick = (letter: string) => {
+    const current = manualStates[letter] || getAutoState(letter);
+    const currentIndex = CYCLE_ORDER.indexOf(current);
+    const nextIndex = (currentIndex + 1) % CYCLE_ORDER.length;
+    const next = CYCLE_ORDER[nextIndex];
+
+    if (next === getAutoState(letter) && !manualStates[letter]) {
+      const { [letter]: _, ...rest } = manualStates;
+      setManualStates(rest);
+    } else {
+      setManualStates({ ...manualStates, [letter]: next });
+    }
   };
 
   return (
-    <>
-      {/* Desktop layout - 2 rows (wide screens) */}
-      <div className="alphabet alphabet-desktop">
-        {desktopRows.map((row, i) => (
-          <div key={`desktop-${i}`} className="alphabet-row">
-            {row.map(renderLetter)}
-          </div>
-        ))}
+    <div className="alphabet">
+      <div className="alphabet-row">
+        {LETTERS.map((letter) => {
+          const state = getDisplayState(letter);
+          return (
+            <span
+              key={letter}
+              className={`letter letter-${state}`}
+              onClick={() => handleClick(letter)}
+              role="button"
+              tabIndex={0}
+              aria-label={`${letter}: ${state}`}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(letter); }}
+            >
+              {letter}
+            </span>
+          );
+        })}
       </div>
-
-      {/* Medium layout - 3 rows (tablets/narrow screens) */}
-      <div className="alphabet alphabet-medium">
-        {mediumRows.map((row, i) => (
-          <div key={`medium-${i}`} className="alphabet-row">
-            {row.map(renderLetter)}
-          </div>
-        ))}
-      </div>
-
-      {/* Mobile layout - 6 rows (small screens) */}
-      <div className="alphabet alphabet-mobile">
-        {mobileRows.map((row, i) => (
-          <div key={`mobile-${i}`} className="alphabet-row">
-            {row.map(renderLetter)}
-          </div>
-        ))}
-      </div>
-    </>
+      <p className="alphabet-hint">Click a letter to cycle: unused → maybe → confirmed → eliminated</p>
+    </div>
   );
 }
