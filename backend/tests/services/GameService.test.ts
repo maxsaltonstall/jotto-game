@@ -278,11 +278,44 @@ describe('GameService', () => {
 
       expect(guess.matchCount).toBe(5);
       expect(guess.isWinningGuess).toBe(true);
+      // Human vs human: game stays ACTIVE and turn passes to the opponent
+      // so they still get a chance to finish (dual-completion gameplay).
       expect(mockRepository.updateGameState).toHaveBeenCalledWith(gameId, {
         winnerId: player1Id,
-        status: 'COMPLETED',
-        currentTurn: undefined
+        player1Completed: true,
+        player2Completed: false,
+        status: 'ACTIVE',
+        currentTurn: player2Id
       });
+    });
+
+    it('should pass the turn to the opponent so they can keep playing after one player wins', async () => {
+      const gameId = generateGameId();
+      const player1Id = generatePlayerId();
+      const player2Id = generatePlayerId();
+
+      const game = createMockActiveGame({
+        gameId,
+        player1Id,
+        player2Id,
+        player1Secret: 'BREAD',
+        player2Secret: 'WATER',
+        currentTurn: player1Id
+      });
+
+      vi.mocked(mockRepository.getGame).mockResolvedValue(game);
+      vi.mocked(mockRepository.saveGuess).mockResolvedValue(undefined);
+      vi.mocked(mockRepository.updateGameState).mockResolvedValue(undefined);
+      vi.mocked(mockRepository.getGuesses).mockResolvedValue([]);
+
+      // Player 1 wins, but player 2 hasn't completed yet
+      await gameService.makeGuess(gameId, player1Id, 'WATER');
+
+      const updateCall = vi.mocked(mockRepository.updateGameState).mock.calls[0][1];
+      expect(updateCall.status).toBe('ACTIVE');
+      // currentTurn must move to player 2 - leaving it on player 1 (who is now
+      // blocked from guessing again) would deadlock the game for player 2.
+      expect(updateCall.currentTurn).toBe(player2Id);
     });
 
     it('should update stats when authenticated user wins', async () => {

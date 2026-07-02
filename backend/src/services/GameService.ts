@@ -233,7 +233,7 @@ export class GameService {
         player1Completed,
         player2Completed,
         status: newStatus,
-        currentTurn: shouldEndGame ? undefined : game.currentTurn
+        currentTurn: shouldEndGame ? undefined : opponentId
       });
 
       logger.info('Game state updated', {
