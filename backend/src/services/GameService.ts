@@ -293,16 +293,18 @@ export class GameService {
       if (this.webSocketService) {
         const updatedGame = await this.repository.getGame(gameId);
         const allGuesses = await this.repository.getGuesses(gameId);
-        this.webSocketService.broadcastGameUpdate(
-          gameId,
-          this.sanitizeGame(updatedGame),
-          allGuesses
-        ).catch((err) => {
+        try {
+          await this.webSocketService.broadcastGameUpdate(
+            gameId,
+            this.sanitizeGame(updatedGame),
+            allGuesses
+          );
+        } catch (err) {
           logger.error('Failed to broadcast game update', {
             gameId,
-            error: err.message
+            error: (err as Error).message
           });
-        });
+        }
       }
     } else {
       // Switch turns
@@ -333,16 +335,18 @@ export class GameService {
       if (this.webSocketService) {
         const updatedGame = await this.repository.getGame(gameId);
         const allGuesses = await this.repository.getGuesses(gameId);
-        this.webSocketService.broadcastGameUpdate(
-          gameId,
-          this.sanitizeGame(updatedGame),
-          allGuesses
-        ).catch((err) => {
+        try {
+          await this.webSocketService.broadcastGameUpdate(
+            gameId,
+            this.sanitizeGame(updatedGame),
+            allGuesses
+          );
+        } catch (err) {
           logger.error('Failed to broadcast game update', {
             gameId,
-            error: err.message
+            error: (err as Error).message
           });
-        });
+        }
       }
     }
 
