@@ -238,4 +238,36 @@ export class WebSocketClient {
   getStatus(): ConnectionStatus {
     return this.status;
   }
+
+  /**
+   * Check whether the underlying socket is actually open right now.
+   * Reads the real WebSocket readyState directly rather than the
+   * class's self-tracked status, which can be stale after the browser
+   * suspends a backgrounded tab without firing onclose.
+   */
+  isHealthy(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Force an immediate reconnect, bypassing backoff delay and attempt
+   * tracking. For deliberate resyncs (e.g. tab visibility regain), not
+   * automatic failure retry.
+   */
+  reconnectNow(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    this.stopHeartbeat();
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      this.ws.close();
+      this.ws = null;
+    }
+    this.doConnect();
+  }
 }
