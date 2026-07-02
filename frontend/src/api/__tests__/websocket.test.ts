@@ -180,4 +180,71 @@ describe('WebSocketClient', () => {
       expect(client.getStatus()).toBe('connected');
     });
   });
+
+  describe('isHealthy', () => {
+    it('should return true when the socket is OPEN', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_OPEN;
+      mockWs.onopen?.();
+
+      expect(client.isHealthy()).toBe(true);
+    });
+
+    it('should return false when the socket is CONNECTING', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_CONNECTING;
+
+      expect(client.isHealthy()).toBe(false);
+    });
+
+    it('should return false when the socket is CLOSED', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_CLOSED;
+
+      expect(client.isHealthy()).toBe(false);
+    });
+
+    it('should return false when no socket has been created yet', () => {
+      expect(client.isHealthy()).toBe(false);
+    });
+  });
+
+  describe('reconnectNow', () => {
+    it('should close the existing socket and open a new one', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_OPEN;
+      mockWs.onopen?.();
+
+      const firstMockWs = mockWs;
+      const callCountBefore = WebSocketConstructor.mock.calls.length;
+
+      client.reconnectNow();
+
+      expect(firstMockWs.close).toHaveBeenCalled();
+      expect(WebSocketConstructor.mock.calls.length).toBe(callCountBefore + 1);
+    });
+
+    it('should not mark the client as intentionally closed', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_OPEN;
+      mockWs.onopen?.();
+
+      client.reconnectNow();
+
+      // After reconnectNow, a subsequent close should still trigger
+      // automatic reconnection (proving intentionallyClosed was not set)
+      const reconnectingHandler = vi.fn();
+      client.on('reconnecting', reconnectingHandler);
+
+      mockWs.readyState = WS_CLOSED;
+      mockWs.onclose?.({ code: 1006, reason: 'abnormal closure' });
+
+      expect(reconnectingHandler).toHaveBeenCalled();
+    });
+  });
 });
