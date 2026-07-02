@@ -246,5 +246,38 @@ describe('WebSocketClient', () => {
 
       expect(reconnectingHandler).toHaveBeenCalled();
     });
+
+    it('[REGRESSION] should not react when the stale old socket fires onclose after reconnectNow, but should still react to a genuinely new unexpected close', () => {
+      client.connect('wss://example.com', 'game-123', 'player-456');
+      expect(mockWs).toBeTruthy();
+      mockWs.readyState = WS_OPEN;
+      mockWs.onopen?.();
+
+      const oldMockWs = mockWs;
+
+      const reconnectingHandler = vi.fn();
+      client.on('reconnecting', reconnectingHandler);
+
+      client.reconnectNow();
+
+      // The new socket has been constructed and is distinct from the old one.
+      const newMockWs = mockWs;
+      expect(newMockWs).not.toBe(oldMockWs);
+
+      // Simulate the stale old socket's close event firing asynchronously,
+      // after reconnectNow() has already moved on to the new socket.
+      oldMockWs.readyState = WS_CLOSED;
+      oldMockWs.onclose?.({ code: 1006, reason: 'stale close' });
+
+      expect(reconnectingHandler).not.toHaveBeenCalled();
+
+      // A genuinely new/current socket closing unexpectedly later should
+      // still trigger normal reconnection - proving we didn't disable
+      // real reconnection behavior.
+      newMockWs.readyState = WS_CLOSED;
+      newMockWs.onclose?.({ code: 1006, reason: 'real abnormal closure' });
+
+      expect(reconnectingHandler).toHaveBeenCalled();
+    });
   });
 });
