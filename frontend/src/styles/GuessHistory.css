@@ -18,6 +18,9 @@
 }
 
 .guess-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-bg-tertiary);
   color: var(--color-text);
   padding: var(--space-sm) 10px;
