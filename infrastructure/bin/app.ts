@@ -15,9 +15,9 @@ const stack = new JottoGameStack(app, 'JottoGameStackV2', {
 });
 
 // Add tags to all resources in the stack
-Tags.of(stack).add('project', 'jotto-game');
+Tags.of(stack).add('project', 'BarcodeGarden');
 Tags.of(stack).add('environment', 'dev');
-Tags.of(stack).add('owner', 'advocacy');
-Tags.of(stack).add('primary-contact', 'salt@datadoghq.com');
+Tags.of(stack).add('owner', 'salt@datadoghq.com');
+Tags.of(stack).add('team', 'advocacy');
 
 app.synth();
